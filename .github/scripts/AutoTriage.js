@@ -36,10 +36,12 @@ console.log(`ℹ️ Enabled: ${dryRun ? 'false (dry-run mode)' : 'true'}`);
 const verbose = process.env.AUTOTRIAGE_VERBOSE === 'true';
 console.log(`ℹ️ Verbose: ${verbose}`);
 
-// Load prompt from environment variable to allow changes without modifying the code
-const basePrompt = process.env.AUTOTRIAGE_PROMPT || `You are a GitHub issue analysis assistant for [PROJECT NAME].
+// Load prompt from environment variable and provide a basic example if not set
+const basePrompt = process.env.AUTOTRIAGE_PROMPT || `You are a GitHub issue analysis assistant.
 PROJECT: [Brief description - e.g., "a React component library", "a Python web framework", "a VS Code extension"]
 TECH STACK: [Main technologies - e.g., "TypeScript, React, CSS", "Python 3.8+, FastAPI", "C#, .NET 8"]
+
+PERSONA: Be helpful but concise. Use clear language and avoid jargon.
 
 CLOSE these issues automatically:
 - Support questions (direct to Discussions/Discord)
@@ -51,7 +53,8 @@ COMMENT when issues need improvement:
 - Vague descriptions without technical details
 - Visual bugs without screenshots
 
-Apply appropriate labels and be direct and helpful in comments.`;
+Applied labels must already exist in the project: bug, enhancement, question, invalid, help wanted, good first issue
+`;
 console.log(`🤖 Base prompt: ${process.env.AUTOTRIAGE_PROMPT ? 'from environment variable' : 'not specified'}`);
 
 const aiModel = process.env.AUTOTRIAGE_MODEL || 'gemini-2.5-pro';
@@ -126,11 +129,11 @@ Analyze this issue and provide your structured response.`;
                         properties: {
                             reason: {
                                 type: "string",
-                                description: "Brief technical explanation for logging"
+                                description: "Brief technical explanation for logging purposes"
                             },
                             comment: {
                                 type: "string",
-                                description: "Technical comment to reply with",
+                                description: "A comment to reply to the issue with",
                                 nullable: true
                             },
                             labels: {
@@ -138,7 +141,7 @@ Analyze this issue and provide your structured response.`;
                                 items: {
                                     type: "string",
                                 },
-                                description: "Array of valid labels to apply that already exist in the project. This array will be used to synchronize labels: any label not included will be removed, and any label included will be added. Do not include labels that should be removed."
+                                description: "Array of labels to apply. Any existing label not included will be removed."
                             }
                         },
                         required: ["reason", "comment", "labels"]
