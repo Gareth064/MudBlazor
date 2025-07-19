@@ -38,7 +38,8 @@ jobs:
         uses: actions/stale@v9
         with:
           stale-issue-label: 'stale'
-          any-of-issue-labels: 'info required'
+          any-of-issue-labels: 'info required,question,answered,not planned,duplicate,invalid,fixed'
+          exempt-issue-labels: 'on hold'
           days-before-issue-stale: 14
           days-before-issue-close: 14
           stale-issue-message: |
@@ -46,6 +47,8 @@ jobs:
             If you have any updates or additional information, please comment below.
 
             If no response is received, it will be automatically closed.
+          close-issue-message: |
+            If you feel the problem has not been resolved, please open a new issue referencing this one.
 
           stale-pr-label: 'stale'
           exempt-pr-labels: 'on hold,breaking change'
