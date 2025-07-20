@@ -51,7 +51,6 @@ console.log(`🤖 Using ${aiModel} (${dryRun ? 'DRY RUN' : 'LIVE'})`);
  * Call Gemini to analyze the issue content and return structured response
  */
 async function callGemini(prompt, apiKey) {
-    const start = Date.now();
     const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${aiModel}:generateContent`,
         {
@@ -79,7 +78,6 @@ async function callGemini(prompt, apiKey) {
             timeout: 60000
         }
     );
-    console.log(`🤖 Gemini returned analysis in ${Date.now() - start}ms with intervention rating of ${analysis.rating}/10`);
 
     if (!response.ok) {
         const errText = await response.text();
@@ -251,7 +249,9 @@ async function processIssue(issue, comments, owner, repo, geminiApiKey, octokit)
 
     // Build prompt and call AI
     const prompt = buildPrompt(issue, comments);
+    const start = Date.now();
     const analysis = await callGemini(prompt, geminiApiKey);
+    console.log(`🤖 Gemini returned analysis in ${Date.now() - start}ms with intervention rating of ${analysis.rating}/10`);
 
     console.log(`🤖 ${analysis.reason}`);
 
