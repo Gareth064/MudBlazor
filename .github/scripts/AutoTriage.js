@@ -83,7 +83,7 @@ async function buildMetadata(issue, octokit) {
     const isIssue = !issue.pull_request;
     const currentLabels = issue.labels?.map(l => l.name || l) || [];
     const hasAssignee = Array.isArray(issue.assignees) ? issue.assignees.length > 0 : !!issue.assignee;
-    const { data: maintainersData } = await octokit.rest.orgs.listMembers({ org: OWNER, role: 'all', per_page: 100 });
+    const { data: collaboratorsData } = await octokit.rest.repos.listCollaborators({ owner: OWNER, repo: REPO, per_page: 100 });
     const { data: releasesData } = await octokit.rest.repos.listReleases({ owner: OWNER, repo: REPO, per_page: 100 });
 
     return {
@@ -98,7 +98,7 @@ async function buildMetadata(issue, octokit) {
         reactions: issue.reactions?.total_count || 0,
         labels: currentLabels,
         assigned: hasAssignee,
-        maintainers: maintainersData.map(c => c.login),
+        collaborators: collaboratorsData.map(c => c.login),
         releases: releasesData.map(r => ({ name: r.tag_name, date: r.published_at })),
     };
 }
