@@ -265,6 +265,9 @@ function getPreviousTriageContext(triageEntry) {
 function saveArtifact(name, contents) {
     const artifactsDir = path.join(process.cwd(), 'artifacts');
     const filePath = path.join(artifactsDir, `${ISSUE_NUMBER}-${name}`);
+    if (contents === undefined || contents === null) {
+        contents = '';
+    }
     fs.mkdirSync(artifactsDir, { recursive: true });
     fs.writeFileSync(filePath, contents, 'utf8');
 }
