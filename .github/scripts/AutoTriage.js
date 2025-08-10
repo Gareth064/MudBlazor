@@ -283,7 +283,7 @@ async function processIssue(octokit, issue, lastTriaged, issueNumber, sharedData
     const metadata = await buildMetadata(issue, sharedData);
     const analysis = await callGemini(prompt, AI_MODEL_PRO, issueNumber);
     analysis._model = 'pro';
-    console.log(`✅ #${issueNumber}: ${initial.reason}`);
+    console.log(`✅ #${issueNumber}: ${analysis.reason}`);
 
     await executeActions(octokit, issueNumber, issue, analysis, metadata);
     return analysis;
@@ -326,7 +326,7 @@ async function fetchAllIssuesAndPRs(octokit, specificIssues = []) {
         per_page: 100
     });
 
-    console.log(`Processing ${allIssues.length} total items`);
+    console.log(`Processing up to ${allIssues.length} items`);
     return allIssues;
 }
 
@@ -433,7 +433,7 @@ function saveDatabase(db) {
 }
 
 main().catch(error => {
-    console.error(`CRITICAL: ${error.message}`);
+    console.error(`💥 CRITICAL: ${error.message}`);
     core.setFailed(error.message);
     process.exit(1);
 });
