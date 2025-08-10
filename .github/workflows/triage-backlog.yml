@@ -42,7 +42,6 @@ jobs:
       - name: Install dependencies
         run: npm install node-fetch@2 @actions/core @octokit/rest
 
-      # Persist the processed issues database (triage-db.json) between runs.
       - name: Cache Triage Database
         uses: actions/cache@v4
         id: cache-db
@@ -60,7 +59,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           AUTOTRIAGE_DB_PATH: ${{ github.workspace }}/triage-db.json
           AUTOTRIAGE_PERMISSIONS: ${{ inputs.permissions || 'none' }}
-          MAX_ISSUES: ${{ inputs.backlog-size || '5' }}
+          MAX_ISSUES: ${{ inputs.backlog-size || '80' }}
           ISSUE_NUMBERS: ${{ inputs.issue-numbers }}
         run: |
           node .github/scripts/AutoTriage.js
