@@ -2,7 +2,7 @@ name: Triage Backlog
 
 on:
   schedule:
-    - cron: '0 6 * * *' # Gemini rates reset at 7.
+    - cron: '0 5 * * *' # Gemini rates reset at 7.
   workflow_dispatch:
     inputs:
       backlog-size:

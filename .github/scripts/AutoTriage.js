@@ -36,18 +36,20 @@ async function callGemini(prompt, model, issueNumber) {
         generationConfig: {
             responseMimeType: "application/json",
             responseSchema: {
-                type: "object",
+                type: "OBJECT",
                 properties: {
-                    severity: { type: "integer", description: "How severe the issue is on a scale of 1 to 10" },
-                    reason: { type: "string", description: "Brief thought process for logging purposes" },
-                    comment: { type: "string", description: "A comment to reply to the issue with", nullable: true },
-                    labels: { type: "array", items: { type: "string" }, description: "The final set of labels the issue should have" },
-                    close: { type: "boolean", description: "Set to true if the issue should be closed as part of this action", nullable: true },
-                    newTitle: { type: "string", description: "A new title for the issue or pull request", nullable: true },
-                    needsAction: { type: "boolean", description: "Whether you think you should perform an action" },
+                    severity: { type: "INTEGER", description: "How severe the issue is on a scale of 1 to 10" },
+                    reason: { type: "STRING", description: "Brief thought process for logging purposes" },
+                    comment: { type: "STRING", description: "A comment to reply to the issue with", nullable: true },
+                    labels: { type: "ARRAY", items: { type: "STRING" }, description: "The final set of labels the issue should have" },
+                    close: { type: "BOOLEAN", description: "Set to true if the issue should be closed as part of this action", nullable: true },
+                    newTitle: { type: "STRING", description: "A new title for the issue or pull request", nullable: true },
+                    needsAction: { type: "BOOLEAN", description: "Whether you think you should perform an action" },
                 },
-                required: ["severity", "reason", "labels", "needsAction"]
-            }
+                required: ["severity", "reason", "labels", "needsAction"],
+                propertyOrdering: ["severity", "reason", "comment", "labels", "close", "newTitle", "needsAction"]
+            },
+            temperature: 0.2,
         }
     };
 
@@ -83,7 +85,7 @@ async function callGemini(prompt, model, issueNumber) {
     }
 }
 
-async function buildMetadata(issue, sharedData) {
+async function buildMetadata(issue) {
     const isIssue = !issue.pull_request;
     const currentLabels = issue.labels?.map(l => l.name || l) || [];
     const hasAssignee = Array.isArray(issue.assignees) ? issue.assignees.length > 0 : !!issue.assignee;
@@ -100,8 +102,6 @@ async function buildMetadata(issue, sharedData) {
         reactions: issue.reactions?.total_count || 0,
         labels: currentLabels,
         assigned: hasAssignee,
-        collaborators: sharedData.collaborators,
-        releases: sharedData.releases,
     };
 }
 
@@ -113,30 +113,30 @@ async function buildTimeline(octokit, issueNumber) {
         per_page: 100
     });
 
-    return timelineEvents.map(event => {
+    return timelineEvents.slice(-10).map(event => {
         const base = { event: event.event, actor: event.actor?.login, timestamp: event.created_at };
         switch (event.event) {
             case 'commented': return { ...base, body: event.body };
-            case 'labeled': return { ...base, label: { name: event.label.name, color: event.label.color } };
-            case 'unlabeled': return { ...base, label: { name: event.label.name } };
+            //case 'labeled': return { ...base, label: { name: event.label.name, color: event.label.color } };
+            //case 'unlabeled': return { ...base, label: { name: event.label.name } };
             case 'renamed': return { ...base, title: { from: event.rename.from, to: event.rename.to } };
-            case 'assigned':
+            case 'assigned': return { ...base, user: event.assignee?.login };
             case 'unassigned': return { ...base, user: event.assignee?.login };
             case 'closed':
             case 'reopened':
-            case 'locked':
-            case 'unlocked': return base;
-            case 'milestoned':
-            case 'demilestoned': return { ...base, milestone: event.milestone?.title };
-            case 'referenced': return { ...base, commit_id: event.commit_id, commit_url: event.commit_url };
-            case 'mentioned': return base;
-            case 'review_requested':
-            case 'review_request_removed': return { ...base, requested_reviewer: event.requested_reviewer?.login };
-            case 'review_dismissed': return { ...base, review: { state: event.dismissed_review?.state, dismissal_message: event.dismissal_message } };
-            case 'merged': return { ...base, commit_id: event.commit_id, commit_url: event.commit_url };
+            //case 'locked':
+            //case 'unlocked': return base;
+            //case 'milestoned':
+            //case 'demilestoned': return { ...base, milestone: event.milestone?.title };
+            //case 'referenced': return { ...base, commit_id: event.commit_id, commit_url: event.commit_url };
+            //case 'mentioned': return base;
+            //case 'review_requested':
+            //case 'review_request_removed': return { ...base, requested_reviewer: event.requested_reviewer?.login };
+            //case 'review_dismissed': return { ...base, review: { state: event.dismissed_review?.state, dismissal_message: event.dismissal_message } };
+            //case 'merged': return { ...base, commit_id: event.commit_id, commit_url: event.commit_url };
             case 'convert_to_draft':
             case 'ready_for_review': return base;
-            case 'transferred': return { ...base, new_repository: event.new_repository?.full_name };
+            //case 'transferred': return { ...base, new_repository: event.new_repository?.full_name };
             default: return null;
         }
     }).filter(Boolean);
@@ -144,12 +144,14 @@ async function buildTimeline(octokit, issueNumber) {
 
 async function buildPrompt(octokit, issue, metadata, lastTriaged, previousReasoning) {
     const basePrompt = fs.readFileSync(path.join(__dirname, 'AutoTriage.prompt'), 'utf8');
-    const issueText = `${issue.title}\n\n${issue.body || ''}`;
     const timelineReport = await buildTimeline(octokit, issue.number);
     const promptString = `${basePrompt}
 
-=== SECTION: ISSUE TO ANALYZE ===
-${issueText}
+=== SECTION: TITLE OF ISSUE TO ANALYZE ===
+${issue.title}
+
+=== SECTION: BODY OF ISSUE TO ANALYZE ===
+${issue.body}
 
 === SECTION: ISSUE METADATA (JSON) ===
 ${JSON.stringify(metadata, null, 2)}
@@ -160,13 +162,10 @@ ${JSON.stringify(timelineReport, null, 2)}
 === SECTION: TRIAGE CONTEXT ===
 Last triaged: ${lastTriaged || 'never'}
 Previous reasoning: ${previousReasoning || 'none'}
-Current triage date: ${new Date().toISOString()}
+Current date: ${new Date().toISOString()}
 Current permissions: ${Array.from(PERMISSIONS).join(', ') || 'none'}
-All possible permissions: label (add/remove labels), comment (post comments), close (close issue), edit (edit title)
-
-=== SECTION: INSTRUCTIONS ===
-Analyze this issue, its metadata, and its full timeline.
-Your entire response must be a single, valid JSON object and nothing else. Do not use Markdown, code fences, or any explanatory text.`;
+Possible permissions: label (add/remove labels), comment (post comments), close (close issue), edit (edit title)
+`;
 
     saveArtifact(issue.number, `gemini-input.md`, promptString);
     return promptString;
@@ -183,7 +182,7 @@ async function updateLabels(octokit, issueNumber, issue, existingLabels, suggest
         ...labelsToAdd.map(l => `+${l}`),
         ...labelsToRemove.map(l => `-${l}`)
     ];
-    console.log(`  🏷️ Labels: ${existingLabels.join(', ') || 'none'}, ${changes.join(', ')}`);
+    console.log(`  🏷️ Labels: ${existingLabels.join(' ') || 'none'}, ${changes.join(' ')}`);
 
     if (!octokit || !PERMISSIONS.has('label')) return;
 
@@ -260,7 +259,7 @@ async function closeIssue(octokit, issueNumber, reason = 'not_planned') {
     });
 }
 
-async function processIssue(octokit, issue, lastTriaged, previousReasoning, issueNumber, sharedData) {
+async function processIssue(octokit, issue, lastTriaged, previousReasoning, issueNumber) {
     const daysSinceTriage = lastTriaged ? (Date.now() - new Date(lastTriaged).getTime()) / 86400000 : Infinity;
     const hasNewActivity = !lastTriaged || new Date(issue.updated_at) > new Date(lastTriaged);
 
@@ -269,7 +268,7 @@ async function processIssue(octokit, issue, lastTriaged, previousReasoning, issu
         return { skipped: true, reason: 'no recent activity' };
     }
 
-    const metadata = await buildMetadata(issue, sharedData);
+    const metadata = await buildMetadata(issue);
     const prompt = await buildPrompt(octokit, issue, metadata, lastTriaged, previousReasoning || '');
 
     // Quick analysis before going further.
@@ -338,20 +337,9 @@ async function main() {
     console.log('Permissions:', Array.from(PERMISSIONS).join(', ') || 'none');
 
     const triageDb = loadDatabase();
-
-    // Fetch shared data
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const collaboratorsData = await octokit.paginate(octokit.rest.repos.listCollaborators, { owner: OWNER, repo: REPO, per_page: 100 });
-    const releasesData = await octokit.paginate(octokit.rest.repos.listReleases, { owner: OWNER, repo: REPO, per_page: 100 });
-    const sharedData = {
-        collaborators: collaboratorsData.map(c => c.login),
-        releases: releasesData.map(r => ({ name: r.tag_name, date: r.published_at })),
-    };
-
-    // Get list of issues to process (specific or backlog handled in helper)
     const fetchedIssues = await fetchAllIssuesAndPRs(octokit, SPECIFIC_ISSUES);
     const issues = new Map(fetchedIssues.map(i => [i.number, i]));
-
     let processedCount = 0;
     let skippedCount = 0;
 
@@ -360,7 +348,7 @@ async function main() {
         try {
             const lastTriaged = triageDb[issueNumber]?.lastTriaged;
             const previousReasoning = triageDb[issueNumber]?.previousReasoning;
-            const analysis = await processIssue(octokit, issue, lastTriaged, previousReasoning, issueNumber, sharedData);
+            const analysis = await processIssue(octokit, issue, lastTriaged, previousReasoning, issueNumber);
 
             if (analysis.skipped) {
                 skippedCount++;
