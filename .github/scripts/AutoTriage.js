@@ -280,6 +280,8 @@ async function processIssue(octokit, issue, lastTriaged, previousReasoning, issu
         return initial;
     }
 
+    console.log(`🔁 #${issueNumber}: ${initial.reason}`);
+
     // Full analysis before taking any action.
     const analysis = await callGemini(prompt, AI_MODEL_PRO, issueNumber);
     analysis._model = 'pro';
