@@ -286,15 +286,13 @@ async function processIssue(octokit, issue, lastTriaged, previousReasoning, issu
     // If the model proposes no actions, skip further analysis.
     const { labelsToAdd, labelsToRemove } = getLabelChanges(metadata.labels, initial.labels);
     const hasLabelChanges = labelsToAdd.length > 0 || labelsToRemove.length > 0;
-    const hasComment = typeof initial.comment === 'string' && initial.comment.length > 0;
-    const hasTitleChange = typeof initial.newTitle === 'string' && initial.newTitle !== issue.title;
+    const hasComment = initial.comment && initial.comment.length > 0;
+    const hasTitleChange = initial.newTitle && initial.newTitle !== issue.title;
     const wantsClose = initial.close === true;
     if (!hasLabelChanges && !hasComment && !hasTitleChange && !wantsClose) {
         console.log(`⏭️ #${issueNumber}: ${initial.reason}`);
         return { skipped: true, reason: initial.reason || 'no actions' };
     }
-
-    console.log(`🔁 #${issueNumber}: ${initial.reason}`);
 
     // Full analysis before taking any action for highest quality results.
     const analysis = await callGemini(prompt, AI_MODEL_PRO, issueNumber);
