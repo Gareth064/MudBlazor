@@ -10,7 +10,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Global constants
-const AI_MODEL_FAST = 'gemini-2.5-flash';
+const AI_MODEL_FAST = 'gemini-2.5-flash-lite';
 const AI_MODEL_PRO = 'gemini-2.5-pro';
 const DB_PATH = process.env.AUTOTRIAGE_DB_PATH;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
@@ -38,12 +38,12 @@ async function callGemini(prompt, model, issueNumber) {
             responseSchema: {
                 type: "OBJECT",
                 properties: {
-                    severity: { type: "INTEGER", description: "How severe the issue is on a scale of 1 to 10" },
-                    reason: { type: "STRING", description: "Brief thought process for logging purposes" },
-                    comment: { type: "STRING", description: "A comment to reply to the issue with" },
-                    labels: { type: "ARRAY", items: { type: "STRING" }, description: "The final set of labels the issue should have" },
-                    close: { type: "BOOLEAN", description: "Set to true if the issue should be closed as part of this action" },
-                    newTitle: { type: "STRING", description: "A new title for the issue or pull request" },
+                    severity: { type: "INTEGER", description: "Issue severity rating from 1-10" },
+                    reason: { type: "STRING", description: "Brief explanation of analysis and decision" },
+                    comment: { type: "STRING", description: "Comment to post on the issue" },
+                    labels: { type: "ARRAY", items: { type: "STRING" }, description: "Complete final label set for the issue" },
+                    close: { type: "BOOLEAN", description: "Whether to close the issue" },
+                    newTitle: { type: "STRING", description: "New title for the issue or pull request" },
                 },
                 required: ["severity", "reason", "labels"]
             },
@@ -166,22 +166,27 @@ Current permissions: ${Array.from(PERMISSIONS).join(', ') || 'none'}. Possible p
 === SECTION: OUTPUT FORMAT ===
 Return only valid JSON (no Markdown fences, no prose).
 
-Required keys:
-- severity: integer in [1, 10]
-- reason: string (brief rationale)
-- labels: array of strings (final label set)
+Required fields (always include):
+- severity: integer from 1-10 (issue severity rating)
+- reason: string (brief explanation of analysis and decision)
+- labels: array of strings (complete final label set for the issue)
 
-Optional keys:
-- comment: string
-- close: boolean
-- newTitle: string
+Optional fields (include only when conditions are met):
+- comment: string (comment to post on the issue)
+- close: boolean (set to true to close the issue)  
+- newTitle: string (new title for the issue)
 
-Rules:
-- Do not include any keys other than the ones above.
-- Do not output "null" for any field; omit optional fields instead.
-- If you propose closing, set 'close: true'.
-- If you propose a title change, set 'newTitle' to the exact new title.
+Inclusion rules for optional fields:
+- Only include an optional field if the corresponding permission is granted in "Current permissions"
+- Only include an optional field if repository policy explicitly authorizes the action
+- Do not include optional fields based on subjective judgment
+- Do not include fields with null values or empty strings
 
+Permission-specific rules:
+- comment: requires "comment" permission
+- close: requires "close" permission and objective policy authorization
+- newTitle: requires "edit" permission and policy authorization for title modifications
+- labels: requires "label" permission for changes; if permission absent, return existing labels unchanged
 `;
 
     saveArtifact(issue.number, `gemini-input.md`, promptString);
