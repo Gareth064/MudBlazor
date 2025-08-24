@@ -17,18 +17,8 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 const [OWNER, REPO] = (GITHUB_REPOSITORY || '').split('/');
-const PROCESSING_BACKLOG = 'MAX_ISSUES' in process.env;
-const MAX_ISSUES = parseInt(process.env.MAX_ISSUES, 10);
-const GITHUB_ISSUE_NUMBER = process.env.GITHUB_ISSUE_NUMBER ? parseInt(process.env.GITHUB_ISSUE_NUMBER, 10) : null;
-const SPECIFIC_ISSUES = GITHUB_ISSUE_NUMBER ? [GITHUB_ISSUE_NUMBER] :
-    (process.env.ISSUE_NUMBERS ? process.env.ISSUE_NUMBERS.split(/\s+/).map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n)) : []);
-const VALID_PERMISSIONS = new Set(['label', 'comment', 'close', 'edit']);
-const PERMISSIONS = new Set(
-    (process.env.AUTOTRIAGE_PERMISSIONS || '')
-        .split(',')
-        .map(p => p.trim())
-        .filter(p => VALID_PERMISSIONS.has(p))
-);
+const SPECIFIC_ISSUES = process.env.ISSUE_NUMBERS ? process.env.ISSUE_NUMBERS.split(/\s+/).map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n)) : [];
+const ENABLED = process.env.AUTOTRIAGE_ENABLED === 'true';
 
 async function callGemini(prompt, model, issueNumber) {
     const payload = {
@@ -67,8 +57,6 @@ async function callGemini(prompt, model, issueNumber) {
     if (response.status === 500) throw new Error('MODEL_INTERNAL_ERROR');
     if (response.status === 503) throw new Error('MODEL_OVERLOADED');
     if (!response.ok) {
-        const bodyText = await response.text().catch(() => '<no body>');
-        saveArtifact(issueNumber || 'global', `gemini-error-${model}-${Date.now()}.log`, `${response.status} ${response.statusText}\n\n${bodyText}`);
         throw new Error(`${response.status} ${response.statusText}`);
     }
 
@@ -80,7 +68,7 @@ async function callGemini(prompt, model, issueNumber) {
     try {
         return JSON.parse(result);
     } catch (parseErr) {
-        saveArtifact(issueNumber || 'global', `gemini-parse-error-${model}-${Date.now()}.json`, JSON.stringify({ message: parseErr.message, stack: parseErr.stack }, null, 2));
+        saveArtifact(issueNumber, `gemini-parse-error-${model}-${Date.now()}.json`, JSON.stringify({ message: parseErr.message, stack: parseErr.stack }, null, 2));
         throw new Error('INVALID_RESPONSE');
     }
 }
@@ -161,23 +149,25 @@ ${JSON.stringify(timelineReport, null, 2)}
 Last triaged: ${lastTriaged || 'never'}
 Previous reasoning: ${previousReasoning || 'none'}
 Current date: ${new Date().toISOString()}. Do all date logic by explicit comparison to the provided "Current date" timestamp (no vague relative wording).
-Current permissions: ${Array.from(PERMISSIONS).join(', ') || 'none'}. Possible permissions: label (add/remove labels), comment (post comments), close (close issue), edit (edit title)
 
 === SECTION: OUTPUT FORMAT ===
 Return only valid JSON (no Markdown fences, no prose).
-Only perform actions (labels, comments, edits, closing) when this prompt explicitly authorizes them and the action's preconditions are satisfied. Do not perform subjective or discretionary actions (for example: "this looks resolved", "seems low-priority", or "close because maintainer answered"). If the conditions for an action are ambiguous or not precisely met, do not act.
+
+Only perform actions (labels, comments, edits, closing) when this prompt explicitly authorizes them and all action-specific preconditions are satisfied. 
+Do not take subjective or discretionary actions (for example: "this looks resolved", "seems low-priority", or "apply label because maintainer implied it"). 
+Never act based on your own interpretation or summary of maintainer comments — maintainer statements are not instructions unless they explicitly direct the bot. 
+If the conditions for any action are ambiguous, incomplete, or not precisely met, do not act.
 
 Required fields (always include):
 - reason: string (explanation of analysis and every decision)
-- labels: array of strings (complete final label set for the issue, requires "label" permission for changes; if permission absent, return existing labels unchanged)
+- labels: array of strings (complete final label set for the issue)
 
 Optional fields (include only when conditions are met):
-- comment: string (comment to post on the issue, requires "comment" permission)
-- close: boolean (set to true to close the issue, requires "close" permission)  
-- newTitle: string (new title for the issue, requires "edit" permission)
+- comment: string (comment to post on the issue)
+- close: boolean (set to true to close the issue)  
+- newTitle: string (new title for the issue)
 
 Inclusion rules for optional fields:
-- Only include an optional field if the corresponding permission is granted in "Current permissions"
 - Only include an optional field if the prompt explicitly authorizes the action
 - Do not include fields with null values or empty strings
 `;
@@ -204,12 +194,11 @@ function getLabelChanges(existingLabels, suggestedLabels) {
 
 async function updateLabels(octokit, issueNumber, issue, existingLabels, suggestedLabels) {
     const { labelsToAdd, labelsToRemove, mergedLabels } = getLabelChanges(existingLabels, suggestedLabels);
-
     if (labelsToAdd.length === 0 && labelsToRemove.length === 0) return;
 
     console.log(`  🏷️ Labels: ${mergedLabels.length ? mergedLabels.join(', ') : 'none'}`);
 
-    if (!octokit || !PERMISSIONS.has('label')) return;
+    if (!octokit || !ENABLED) return;
 
     if (labelsToAdd.length > 0) {
         await octokit.rest.issues.addLabels({
@@ -252,7 +241,7 @@ async function executeActions(octokit, issueNumber, issue, analysis, metadata) {
 }
 
 async function createComment(octokit, issueNumber, analysis) {
-    if (!octokit || !PERMISSIONS.has('comment')) return;
+    if (!octokit || !ENABLED) return;
 
     const commentWithReasoning = `<!-- ${analysis.reason || 'No reasoning provided'} -->\n\n${analysis.comment}`;
 
@@ -266,7 +255,7 @@ async function createComment(octokit, issueNumber, analysis) {
 
 async function updateTitle(octokit, issueNumber, title, newTitle) {
     console.log(`  ✏️ Updating title from "${title}" to "${newTitle}"`);
-    if (!octokit || !PERMISSIONS.has('edit')) return;
+    if (!octokit || !ENABLED) return;
     await octokit.rest.issues.update({
         owner: OWNER,
         repo: REPO,
@@ -277,7 +266,7 @@ async function updateTitle(octokit, issueNumber, title, newTitle) {
 
 async function closeIssue(octokit, issueNumber, reason = 'not_planned') {
     console.log(`  🔒 Closing issue as ${reason}`);
-    if (!octokit || !PERMISSIONS.has('close')) return;
+    if (!octokit || !ENABLED) return;
     await octokit.rest.issues.update({
         owner: OWNER,
         repo: REPO,
@@ -288,16 +277,6 @@ async function closeIssue(octokit, issueNumber, reason = 'not_planned') {
 }
 
 async function processIssue(octokit, issue, lastTriaged, previousReasoning, issueNumber) {
-    const daysSinceTriage = lastTriaged ? (Date.now() - new Date(lastTriaged).getTime()) / 86400000 : Infinity;
-    const hasNewActivity = !lastTriaged || new Date(issue.updated_at) > new Date(lastTriaged);
-
-    saveArtifact(issueNumber, 'issue.json', JSON.stringify(issue, null, 2));
-
-    // Skip early without building prompt if working through backlog and the issue hasn't expired
-    if (PROCESSING_BACKLOG && daysSinceTriage < 7 && !hasNewActivity) {
-        return { skipped: true, reason: 'no recent activity' };
-    }
-
     const metadata = await buildMetadata(issue);
     const prompt = await buildPrompt(octokit, issue, metadata, lastTriaged, previousReasoning || '');
 
@@ -313,7 +292,7 @@ async function processIssue(octokit, issue, lastTriaged, previousReasoning, issu
     const wantsClose = initial.close === true;
     if (!hasLabelChanges && !hasComment && !hasTitleChange && !wantsClose) {
         console.log(`⏭️ #${issueNumber}: ${initial.reason}`);
-        return { skipped: true, reason: initial.reason || 'no actions' };
+        return initial;
     }
 
     // Full analysis before taking any action for highest quality results.
@@ -332,28 +311,25 @@ function saveArtifact(issueNumber, name, contents = '') {
     fs.writeFileSync(filePath, contents, 'utf8');
 }
 
-async function fetchAllIssuesAndPRs(octokit, specificIssues = []) {
-    // If specific issues are provided, fetch those sequentially
-    if (Array.isArray(specificIssues) && specificIssues.length > 0) {
-        console.log(`Fetching ${specificIssues.length} specified issues...`);
-        const issues = [];
-        for (const issueNumber of specificIssues) {
-            try {
-                const { data } = await octokit.rest.issues.get({
-                    owner: OWNER,
-                    repo: REPO,
-                    issue_number: issueNumber
-                });
-                issues.push(data);
-            } catch (error) {
-                console.error(`Failed to fetch #${issueNumber}: ${error.message}`);
-            }
+async function fetchIssueObjects(octokit, numbers, triageDb) {
+    let issues = [];
+    if (numbers && numbers.length > 0) {
+        // Use provided issue numbers in the exact order they were passed
+        for (const number of numbers) {
+            const { data } = await octokit.rest.issues.get({
+                owner: OWNER,
+                repo: REPO,
+                issue_number: number
+            });
+            issues.push(data);
         }
+
+        console.log(`Processing ${issues.length} specified items in provided order`);
         return issues;
     }
 
-    // Use Octokit's paginate to fetch all open issues (includes PRs)
-    const allIssues = await octokit.paginate(octokit.rest.issues.listForRepo, {
+    // Use Octokit's paginate to fetch all open issues and PRs
+    issues = await octokit.paginate(octokit.rest.issues.listForRepo, {
         owner: OWNER,
         repo: REPO,
         state: 'open',
@@ -362,8 +338,30 @@ async function fetchAllIssuesAndPRs(octokit, specificIssues = []) {
         per_page: 100
     });
 
-    console.log(`Processing up to ${allIssues.length} items`);
-    return allIssues;
+    // Sort issues by priority:
+    // 1. Has new activity since last triage
+    // 2. Has never been triaged
+    // 3. Triage data from oldest to newest
+    issues.sort((a, b) => {
+        const aLastTriaged = triageDb[a.number]?.lastTriaged;
+        const bLastTriaged = triageDb[b.number]?.lastTriaged;
+        const aHasNewActivity = !aLastTriaged || new Date(a.updated_at) > new Date(aLastTriaged);
+        const bHasNewActivity = !bLastTriaged || new Date(b.updated_at) > new Date(bLastTriaged);
+
+        // Priority 1: Issues with new activity since last triage
+        if (aHasNewActivity && !bHasNewActivity) return -1;
+        if (!aHasNewActivity && bHasNewActivity) return 1;
+
+        // Priority 2: Among same priority group, never triaged comes before previously triaged
+        if (!aLastTriaged && !bLastTriaged) return 0;
+        if (!aLastTriaged) return -1;
+        if (!bLastTriaged) return 1;
+
+        // Priority 3: Among previously triaged, oldest triage data first
+        return new Date(aLastTriaged) - new Date(bLastTriaged);
+    });
+
+    return issues;
 }
 
 async function main() {
@@ -371,26 +369,19 @@ async function main() {
         if (!process.env[envVar]) throw new Error(`Missing environment variable: ${envVar}`);
     }
 
-    console.log('Permissions:', Array.from(PERMISSIONS).join(', ') || 'none');
+    console.log('Enabled:', ENABLED ? 'true (actions will be performed)' : 'false (dry-run mode)');
 
     const triageDb = loadDatabase();
     const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const fetchedIssues = await fetchAllIssuesAndPRs(octokit, SPECIFIC_ISSUES);
-    const issues = new Map(fetchedIssues.map(i => [i.number, i]));
-    let processedCount = 0;
-    let skippedCount = 0;
+    const fetchedIssues = await fetchIssueObjects(octokit, SPECIFIC_ISSUES, triageDb);
 
-    // Process each issue one by one
-    for (const [issueNumber, issue] of issues) {
+    // Process each issue in the order returned by fetchIssueObjects
+    for (const issue of fetchedIssues) {
+        const issueNumber = issue.number;
         try {
             const lastTriaged = triageDb[issueNumber]?.lastTriaged;
             const previousReasoning = triageDb[issueNumber]?.previousReasoning;
             const analysis = await processIssue(octokit, issue, lastTriaged, previousReasoning, issueNumber);
-
-            if (analysis.skipped) {
-                skippedCount++;
-                continue;
-            }
 
             // Update in-memory database
             if (DB_PATH && analysis) {
@@ -399,16 +390,8 @@ async function main() {
                     previousReasoning: analysis.reason
                 };
             }
-
-            if (analysis._model === 'pro') {
-                processedCount++;
-                if (processedCount >= MAX_ISSUES) {
-                    break;
-                }
-            }
         } catch (error) {
             const msg = (error && error.message) ? error.message : String(error);
-            skippedCount++;
             if (msg === 'QUOTA_EXCEEDED') {
                 console.error(`❌ #${issueNumber}: Quota exceeded`);
                 break;
@@ -431,7 +414,6 @@ async function main() {
         }
     }
 
-    console.log(`Analyzed ${processedCount} out of ${MAX_ISSUES} issues, skipped ${skippedCount}`);
     saveDatabase(triageDb);
 }
 
@@ -455,7 +437,7 @@ function loadDatabase() {
 }
 
 function saveDatabase(db) {
-    if (!DB_PATH) return;
+    if (!DB_PATH || !ENABLED) return;
     try {
         fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
         console.log(`Database saved successfully`);
@@ -466,12 +448,7 @@ function saveDatabase(db) {
 
 main().catch(error => {
     console.error(`💥 ${error.message}`);
-    try {
-        const contents = (error && error.stack) ? error.stack : (typeof error === 'string' ? error : JSON.stringify(error, null, 2));
-        saveArtifact('global', "error.log", contents);
-    } catch (e) {
-        console.error('Failed to write error artifact:', e && e.message);
-    }
+    console.error((error && error.stack) ? error.stack : (typeof error === 'string' ? error : JSON.stringify(error, null, 2)));
     core.setFailed(error.message);
     process.exit(1);
 });

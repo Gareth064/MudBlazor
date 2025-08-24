@@ -20,9 +20,9 @@ jobs:
 
       - name: Triage with AI Assistant
         env:
-          GITHUB_ISSUE_NUMBER: ${{ github.event.pull_request.number }}
+          ISSUE_NUMBERS: ${{ github.event.pull_request.number }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          AUTOTRIAGE_PERMISSIONS: ${{ vars.AUTOTRIAGE_PERMISSIONS }}
+          AUTOTRIAGE_ENABLED: ${{ vars.AUTOTRIAGE_ENABLED }}
         run: node ./.github/scripts/AutoTriage.js
         
