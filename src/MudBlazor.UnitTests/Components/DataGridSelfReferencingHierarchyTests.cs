@@ -93,7 +93,7 @@ public class DataGridSelfReferencingHierarchyTests : BunitTest
         
         // Should have triggered the event
         comp.Instance.ToggledEvents.Should().NotBeEmpty();
-        comp.Instance.ToggledEvents.First().IsExpanded.Should().BeTrue();
+        comp.Instance.ToggledEvents.First().Expanded.Should().BeTrue();
         comp.Instance.ToggledEvents.First().Item.Title.Should().NotBeNull();
     }
 }
