@@ -108,7 +108,7 @@
                                                     <ChildContent>
                                                         <MudDropZone T="Column<T>" Class="flex-grow-1" AllowReorder=this.ColumnsPanelReordering />
                                                     </ChildContent>
-                                                    <ItemRenderer>
+                                                    <ItemRenderer Context="context">
                                                         @if (string.IsNullOrEmpty(_columnsPanelSearch) || context.Title?.Contains(_columnsPanelSearch, StringComparison.InvariantCultureIgnoreCase) == true)
                                                         {
                                                             <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Style="border-bottom: 1px solid var(--mud-palette-table-lines);">
