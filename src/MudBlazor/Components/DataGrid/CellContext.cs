@@ -23,6 +23,11 @@ namespace MudBlazor
         public T Item { get; set; }
 
         /// <summary>
+        /// The data grid that contains this cell.
+        /// </summary>
+        public MudDataGrid<T> DataGrid { get; }
+
+        /// <summary>
         /// The behaviors which can be performed in the cell.
         /// </summary>
         public CellActions Actions { get; }
@@ -46,6 +51,7 @@ namespace MudBlazor
         {
             _selection = dataGrid.Selection;
             OpenHierarchies = dataGrid._openHierarchies;
+            DataGrid = dataGrid;
             Item = item;
             Actions = new CellActions
             {
