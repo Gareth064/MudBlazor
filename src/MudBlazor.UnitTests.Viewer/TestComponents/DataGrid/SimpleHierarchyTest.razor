@@ -1,0 +1,39 @@
+@using MudBlazor
+@using System.Collections.Generic
+
+<MudText Typo="Typo.h6">Self-Referencing Hierarchy Test</MudText>
+<MudText>This test shows hierarchical tasks with subtasks. Click expand buttons to see children.</MudText>
+
+<MudDataGrid T="SimpleTask" Items="@Items" SelfReferencingHierarchy="true" ChildrenSelector="@(item => item.Children)" 
+             HierarchyIndentationSize="24">
+    <Columns>
+        <HierarchyColumn />
+        <PropertyColumn Property="x => x.Name" Title="Task Name" />
+        <PropertyColumn Property="x => x.Status" Title="Status" />
+    </Columns>
+</MudDataGrid>
+
+<MudText Typo="Typo.h6" Class="mt-4">Test Items Info</MudText>
+<MudText>Total Items: @Items.Count</MudText>
+<MudText>Root Items: @Items.Count</MudText>
+
+@code {
+    public record SimpleTask(string Name, string Status, List<SimpleTask> Children);
+
+    public List<SimpleTask> Items = new()
+    {
+        new SimpleTask("Task 1", "In Progress", new List<SimpleTask>
+        {
+            new SimpleTask("Task 1.1", "Complete", new List<SimpleTask>()),
+            new SimpleTask("Task 1.2", "In Progress", new List<SimpleTask>
+            {
+                new SimpleTask("Task 1.2.1", "To Do", new List<SimpleTask>()),
+            })
+        }),
+        new SimpleTask("Task 2", "To Do", new List<SimpleTask>
+        {
+            new SimpleTask("Task 2.1", "To Do", new List<SimpleTask>())
+        }),
+        new SimpleTask("Task 3", "Complete", new List<SimpleTask>())
+    };
+}

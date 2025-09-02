@@ -47,12 +47,19 @@ namespace MudBlazor
                 .Build();
 
         /// <summary>
-        /// Gets the indentation style for hierarchical display if this is the first column and hierarchical mode is enabled.
+        /// Gets the indentation style for hierarchical display if this is the first data column and hierarchical mode is enabled.
         /// </summary>
         private string GetHierarchicalIndentationStyle()
         {
-            // Only apply indentation to the first column in self-referencing hierarchical mode
-            if (!_dataGrid.SelfReferencingHierarchy || _dataGrid.RenderedColumns.FirstOrDefault() != _column)
+            // Only apply indentation to the first data column (excluding hierarchy/select columns) in self-referencing hierarchical mode
+            if (!_dataGrid.SelfReferencingHierarchy)
+                return string.Empty;
+
+            // Find the first data column (not hierarchy or select column)
+            var firstDataColumn = _dataGrid.RenderedColumns
+                .FirstOrDefault(c => c.Tag?.ToString() != "hierarchy-column" && c.Tag?.ToString() != "select-column");
+            
+            if (firstDataColumn != _column)
                 return string.Empty;
 
             var hierarchicalItem = _dataGrid.GetHierarchicalItem(_item);

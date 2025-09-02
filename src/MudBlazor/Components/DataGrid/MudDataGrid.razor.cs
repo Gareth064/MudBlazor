@@ -1217,15 +1217,12 @@ namespace MudBlazor
                     if (_hierarchicalCurrentPageItems == null)
                     {
                         BuildHierarchicalItems();
-                        _hierarchicalCurrentPageItems = _flattenedHierarchicalItems
-                            .Where(h => h.IsExpanded || h.Parent == null || h.Parent.IsExpanded)
-                            .Select(h => h.Item);
+                        var visibleItems = GetVisibleHierarchicalItems().ToList();
                         
                         // Apply pagination if needed
                         if (PagerContent != null && !HasServerData)
                         {
-                            var filteredItemCount = _flattenedHierarchicalItems
-                                .Count(h => h.IsExpanded || h.Parent == null || h.Parent.IsExpanded);
+                            var filteredItemCount = visibleItems.Count;
                             int lastPageNo;
                             if (filteredItemCount == 0)
                                 lastPageNo = 0;
@@ -1233,9 +1230,13 @@ namespace MudBlazor
                                 lastPageNo = (filteredItemCount / RowsPerPage) - (filteredItemCount % RowsPerPage == 0 ? 1 : 0);
                             CurrentPage = lastPageNo < CurrentPage ? lastPageNo : CurrentPage;
                             
-                            _hierarchicalCurrentPageItems = _hierarchicalCurrentPageItems
+                            _hierarchicalCurrentPageItems = visibleItems
                                 .Skip(CurrentPage * RowsPerPage)
                                 .Take(RowsPerPage);
+                        }
+                        else
+                        {
+                            _hierarchicalCurrentPageItems = visibleItems;
                         }
                     }
                     
@@ -2552,6 +2553,7 @@ namespace MudBlazor
 
             var rootItems = FilteredItems.ToList();
             
+            // Build full hierarchy first
             foreach (var rootItem in rootItems)
             {
                 BuildHierarchicalItemRecursive(rootItem, null, 0);
@@ -2579,14 +2581,42 @@ namespace MudBlazor
             _flattenedHierarchicalItems.Add(hierarchicalItem);
             _hierarchicalItemsLookup[item] = hierarchicalItem;
 
-            // Add children if the item is expanded or has no parent (root items are always included)
-            if (hierarchicalItem.IsExpanded || parent == null)
+            // Always build the full tree structure
+            foreach (var child in children)
             {
-                foreach (var child in children)
-                {
-                    BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1);
-                }
+                BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1);
             }
+        }
+
+        /// <summary>
+        /// Gets visible hierarchical items based on expansion state.
+        /// </summary>
+        private IEnumerable<T> GetVisibleHierarchicalItems()
+        {
+            return _flattenedHierarchicalItems
+                .Where(h => IsHierarchicalItemVisible(h))
+                .Select(h => h.Item);
+        }
+
+        /// <summary>
+        /// Determines if a hierarchical item should be visible based on its parent's expansion state.
+        /// </summary>
+        private bool IsHierarchicalItemVisible(HierarchicalItem<T> item)
+        {
+            // Root items are always visible
+            if (item.Parent == null)
+                return true;
+                
+            // Check if all parents up the chain are expanded
+            var current = item.Parent;
+            while (current != null)
+            {
+                if (!current.IsExpanded)
+                    return false;
+                current = current.Parent;
+            }
+            
+            return true;
         }
 
         /// <summary>
