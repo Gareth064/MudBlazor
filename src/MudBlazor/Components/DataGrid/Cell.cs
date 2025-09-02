@@ -43,7 +43,21 @@ namespace MudBlazor
             new StyleBuilder()
                 .AddStyle(_column.CellStyleFunc?.Invoke(_item))
                 .AddStyle(_column.CellStyle)
+                .AddStyle(GetHierarchicalIndentationStyle())
                 .Build();
+
+        /// <summary>
+        /// Gets the indentation style for hierarchical display if this is the first column and hierarchical mode is enabled.
+        /// </summary>
+        private string GetHierarchicalIndentationStyle()
+        {
+            // Only apply indentation to the first column in self-referencing hierarchical mode
+            if (!_dataGrid.SelfReferencingHierarchy || _dataGrid.RenderedColumns.FirstOrDefault() != _column)
+                return string.Empty;
+
+            var hierarchicalItem = _dataGrid.GetHierarchicalItem(_item);
+            return hierarchicalItem?.GetIndentationStyle(_dataGrid.HierarchyIndentationSize) ?? string.Empty;
+        }
 
         #endregion
 

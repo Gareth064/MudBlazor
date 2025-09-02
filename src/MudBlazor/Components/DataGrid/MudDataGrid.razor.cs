@@ -46,6 +46,11 @@ namespace MudBlazor
         private GridData<T> _serverData = new() { TotalItems = 0, Items = Array.Empty<T>() };
         private Func<IFilterDefinition<T>> _defaultFilterDefinitionFactory = () => new FilterDefinition<T>();
         internal (double Top, double Left) _openPosition = (0, 0);
+        
+        // Self-referencing hierarchy fields
+        private List<HierarchicalItem<T>> _flattenedHierarchicalItems = [];
+        private Dictionary<T, HierarchicalItem<T>> _hierarchicalItemsLookup = [];
+        private IEnumerable<T> _hierarchicalCurrentPageItems = null;
 
         private readonly ParameterState<T> _selectedItemState;
         private readonly ParameterState<HashSet<T>> _selectedItemsState;
@@ -775,6 +780,7 @@ namespace MudBlazor
                     InvokeAsync(() =>
                     {
                         _currentRenderFilteredItemsCache = null;
+                        InvalidateHierarchicalItems();
 
                         if (Groupable)
                             GroupItems();
@@ -1139,6 +1145,36 @@ namespace MudBlazor
         public bool ExpandSingleRow { get; set; }
 
         /// <summary>
+        /// Enables self-referencing hierarchical view where items can have children of the same type.
+        /// </summary>
+        /// <remarks>
+        /// When enabled, items can have parent-child relationships and are displayed with indentation
+        /// to show the hierarchy structure. Requires <see cref="ChildrenSelector"/> to be set.
+        /// Defaults to <c>false</c>.
+        /// </remarks>
+        [Parameter]
+        public bool SelfReferencingHierarchy { get; set; }
+
+        /// <summary>
+        /// Function that returns the children of a given item for self-referencing hierarchical view.
+        /// </summary>
+        /// <remarks>
+        /// This function is used when <see cref="SelfReferencingHierarchy"/> is enabled to determine
+        /// the parent-child relationships between items. Return an empty collection for items with no children.
+        /// </remarks>
+        [Parameter]
+        public Func<T, IEnumerable<T>>? ChildrenSelector { get; set; }
+
+        /// <summary>
+        /// The size of indentation in pixels for each hierarchy level in self-referencing hierarchical view.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>24</c>. Only applies when <see cref="SelfReferencingHierarchy"/> is enabled.
+        /// </remarks>
+        [Parameter]
+        public int HierarchyIndentationSize { get; set; } = 24;
+
+        /// <summary>
         /// The comparer used to determine row selection.
         /// </summary>
         /// <remarks>
@@ -1175,6 +1211,38 @@ namespace MudBlazor
         {
             get
             {
+                // Handle self-referencing hierarchy
+                if (SelfReferencingHierarchy && ChildrenSelector != null)
+                {
+                    if (_hierarchicalCurrentPageItems == null)
+                    {
+                        BuildHierarchicalItems();
+                        _hierarchicalCurrentPageItems = _flattenedHierarchicalItems
+                            .Where(h => h.IsExpanded || h.Parent == null || h.Parent.IsExpanded)
+                            .Select(h => h.Item);
+                        
+                        // Apply pagination if needed
+                        if (PagerContent != null && !HasServerData)
+                        {
+                            var filteredItemCount = _flattenedHierarchicalItems
+                                .Count(h => h.IsExpanded || h.Parent == null || h.Parent.IsExpanded);
+                            int lastPageNo;
+                            if (filteredItemCount == 0)
+                                lastPageNo = 0;
+                            else
+                                lastPageNo = (filteredItemCount / RowsPerPage) - (filteredItemCount % RowsPerPage == 0 ? 1 : 0);
+                            CurrentPage = lastPageNo < CurrentPage ? lastPageNo : CurrentPage;
+                            
+                            _hierarchicalCurrentPageItems = _hierarchicalCurrentPageItems
+                                .Skip(CurrentPage * RowsPerPage)
+                                .Take(RowsPerPage);
+                        }
+                    }
+                    
+                    return _hierarchicalCurrentPageItems;
+                }
+                
+                // Original non-hierarchical logic
                 if (PagerContent == null)
                 {
                     return FilteredItems; // we have no pagination
@@ -1454,6 +1522,7 @@ namespace MudBlazor
 
                     _serverData = await VirtualizeServerData(state, _serverDataCancellationTokenSource.Token);
                     _currentRenderFilteredItemsCache = null;
+                    InvalidateHierarchicalItems();
 
                     Loading = false;
                 }
@@ -1474,6 +1543,7 @@ namespace MudBlazor
 
                 _serverData = await ServerData(state);
                 _currentRenderFilteredItemsCache = null;
+                InvalidateHierarchicalItems();
 
                 if (CurrentPage * RowsPerPage > _serverData.TotalItems)
                     CurrentPage = 0;
@@ -1985,6 +2055,7 @@ namespace MudBlazor
                 if (!request.CancellationToken.IsCancellationRequested)
                 {
                     _currentRenderFilteredItemsCache = null;
+                    InvalidateHierarchicalItems();
                 }
 
                 return new ItemsProviderResult<IndexBag<T>>(
@@ -2459,7 +2530,83 @@ namespace MudBlazor
                 await HierarchyVisibilityToggled.InvokeAsync(new(item, false));
             }
 
+            // Invalidate hierarchical cache if using self-referencing hierarchy
+            if (SelfReferencingHierarchy)
+            {
+                InvalidateHierarchicalItems();
+            }
+
             await InvokeAsync(StateHasChanged);
+        }
+
+        /// <summary>
+        /// Builds the flattened hierarchical items list from the original items.
+        /// </summary>
+        private void BuildHierarchicalItems()
+        {
+            _flattenedHierarchicalItems.Clear();
+            _hierarchicalItemsLookup.Clear();
+            
+            if (ChildrenSelector == null)
+                return;
+
+            var rootItems = FilteredItems.ToList();
+            
+            foreach (var rootItem in rootItems)
+            {
+                BuildHierarchicalItemRecursive(rootItem, null, 0);
+            }
+        }
+
+        /// <summary>
+        /// Recursively builds hierarchical items with depth tracking.
+        /// </summary>
+        private void BuildHierarchicalItemRecursive(T item, HierarchicalItem<T>? parent, int level)
+        {
+            var children = ChildrenSelector!(item)?.ToList() ?? new List<T>();
+            var hasChildren = children.Count > 0;
+            var isExpanded = _openHierarchies.Contains(item);
+
+            var hierarchicalItem = new HierarchicalItem<T>
+            {
+                Item = item,
+                Level = level,
+                Parent = parent,
+                HasChildren = hasChildren,
+                IsExpanded = hasChildren && isExpanded
+            };
+
+            _flattenedHierarchicalItems.Add(hierarchicalItem);
+            _hierarchicalItemsLookup[item] = hierarchicalItem;
+
+            // Add children if the item is expanded or has no parent (root items are always included)
+            if (hierarchicalItem.IsExpanded || parent == null)
+            {
+                foreach (var child in children)
+                {
+                    BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the hierarchical item wrapper for a given data item.
+        /// </summary>
+        /// <param name="item">The data item.</param>
+        /// <returns>The hierarchical item wrapper, or null if not found.</returns>
+        internal HierarchicalItem<T>? GetHierarchicalItem(T item)
+        {
+            return _hierarchicalItemsLookup.TryGetValue(item, out var hierarchicalItem) 
+                ? hierarchicalItem 
+                : null;
+        }
+
+        /// <summary>
+        /// Invalidates the hierarchical items cache, forcing a rebuild on the next access.
+        /// </summary>
+        private void InvalidateHierarchicalItems()
+        {
+            _hierarchicalCurrentPageItems = null;
         }
 
 

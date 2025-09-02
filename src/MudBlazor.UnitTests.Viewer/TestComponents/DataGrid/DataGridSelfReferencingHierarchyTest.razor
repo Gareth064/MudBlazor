@@ -1,0 +1,50 @@
+@using MudBlazor
+@using System.Collections.Generic
+
+<MudDataGrid T="TaskItem" Items="@Items" SelfReferencingHierarchy="true" ChildrenSelector="@(item => item.SubTasks)" 
+             HierarchyIndentationSize="24" HierarchyVisibilityToggled="@OnHierarchyVisibilityToggled">
+    <Columns>
+        <HierarchyColumn />
+        <PropertyColumn Property="x => x.Title" Title="Task Title" />
+        <PropertyColumn Property="x => x.Status" Title="Status" />
+        <PropertyColumn Property="x => x.Priority" Title="Priority" />
+        <PropertyColumn Property="x => x.AssignedTo" Title="Assigned To" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    public record TaskItem(string Title, string Status, int Priority, string AssignedTo, List<TaskItem> SubTasks);
+
+    public List<TaskItem> Items = new()
+    {
+        new TaskItem("Project Setup", "In Progress", 1, "Alice", new List<TaskItem>
+        {
+            new TaskItem("Initialize Repository", "Complete", 2, "Alice", new List<TaskItem>()),
+            new TaskItem("Setup CI/CD", "In Progress", 1, "Bob", new List<TaskItem>
+            {
+                new TaskItem("Configure GitHub Actions", "Complete", 2, "Bob", new List<TaskItem>()),
+                new TaskItem("Setup Deployment", "To Do", 1, "Bob", new List<TaskItem>())
+            }),
+            new TaskItem("Project Documentation", "To Do", 3, "Charlie", new List<TaskItem>())
+        }),
+        new TaskItem("Feature Development", "To Do", 2, "Team", new List<TaskItem>
+        {
+            new TaskItem("User Authentication", "To Do", 1, "Alice", new List<TaskItem>
+            {
+                new TaskItem("Login Page", "To Do", 2, "Alice", new List<TaskItem>()),
+                new TaskItem("Registration Page", "To Do", 2, "Alice", new List<TaskItem>()),
+                new TaskItem("Password Reset", "To Do", 3, "Alice", new List<TaskItem>())
+            }),
+            new TaskItem("Dashboard", "To Do", 2, "Bob", new List<TaskItem>())
+        }),
+        new TaskItem("Testing", "To Do", 1, "Charlie", new List<TaskItem>())
+    };
+
+    public List<DataGridHierarchyVisibilityToggledEventArgs<TaskItem>> ToggledEvents = [];
+
+    private Task OnHierarchyVisibilityToggled(DataGridHierarchyVisibilityToggledEventArgs<TaskItem> args)
+    {
+        ToggledEvents.Add(args);
+        return Task.CompletedTask;
+    }
+}

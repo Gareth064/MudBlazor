@@ -166,4 +166,24 @@ public partial class HierarchyColumn<[DynamicallyAccessedMembers(DynamicallyAcce
                 : ClosedIcon;
         }
     }
+
+    /// <summary>
+    /// Determines whether to show the expand button for a given item.
+    /// </summary>
+    /// <param name="context">The cell context.</param>
+    /// <returns>True if the expand button should be shown, otherwise false.</returns>
+    private bool ShouldShowExpandButton(CellContext<T> context)
+    {
+        var dataGrid = context.DataGrid;
+        
+        // In self-referencing hierarchical mode, only show button if item has children
+        if (dataGrid.SelfReferencingHierarchy && dataGrid.ChildrenSelector != null)
+        {
+            var hierarchicalItem = dataGrid.GetHierarchicalItem(context.Item);
+            return hierarchicalItem?.HasChildren == true;
+        }
+        
+        // For traditional hierarchy mode, always show the button (existing behavior)
+        return true;
+    }
 }
