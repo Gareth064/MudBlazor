@@ -1,5 +1,6 @@
-@using MudBlazor
+﻿@using MudBlazor
 @using System.Collections.Generic
+@using MudBlazor.Utilities
 
 <MudDataGrid T="TaskItem" Items="@Items" SelfReferencingHierarchy="true" ChildrenSelector="@(item => item.SubTasks)" 
              HierarchyIndentationSize="24" HierarchyVisibilityToggled="@OnHierarchyVisibilityToggled">

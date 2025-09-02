@@ -1,4 +1,4 @@
-// Copyright (c) MudBlazor 2021
+﻿// Copyright (c) MudBlazor 2021
 // MudBlazor licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
@@ -25,7 +25,7 @@ internal class HierarchicalItem<[DynamicallyAccessedMembers(DynamicallyAccessedM
     /// <summary>
     /// The parent hierarchical item, if any.
     /// </summary>
-    public HierarchicalItem<T>? Parent { get; init; }
+    public HierarchicalItem<T> Parent { get; init; }
     
     /// <summary>
     /// Whether this item has children.
