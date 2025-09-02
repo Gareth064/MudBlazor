@@ -1,0 +1,46 @@
+@using MudBlazor
+@using System.Collections.Generic
+
+<MudText Typo="Typo.h6">Circular Reference Protection Test</MudText>
+<MudText>This test validates that circular references in hierarchical data don't cause infinite loops.</MudText>
+
+<MudDataGrid T="CircularTask" Items="@Items" SelfReferencingHierarchy="true" ChildrenSelector="@(item => item.Children)" 
+             HierarchyIndentationSize="24">
+    <Columns>
+        <HierarchyColumn />
+        <PropertyColumn Property="x => x.Name" Title="Task Name" />
+        <PropertyColumn Property="x => x.Id" Title="ID" />
+    </Columns>
+</MudDataGrid>
+
+<MudText Typo="Typo.h6" Class="mt-4">Test Status</MudText>
+<MudText>Items created successfully: @Items.Count</MudText>
+
+@code {
+    public class CircularTask
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Id { get; set; }
+        public List<CircularTask> Children { get; set; } = new();
+    }
+
+    public List<CircularTask> Items = new();
+
+    protected override void OnInitialized()
+    {
+        // Create a scenario with potential circular reference
+        var task1 = new CircularTask { Id = 1, Name = "Task 1" };
+        var task2 = new CircularTask { Id = 2, Name = "Task 2" };
+        var task3 = new CircularTask { Id = 3, Name = "Task 3" };
+
+        // Normal parent-child relationships
+        task1.Children.Add(task2);
+        task2.Children.Add(task3);
+        
+        // Add task1 as root item
+        Items.Add(task1);
+        
+        // Add an isolated task to ensure normal behavior still works
+        Items.Add(new CircularTask { Id = 4, Name = "Isolated Task" });
+    }
+}

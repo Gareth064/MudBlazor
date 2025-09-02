@@ -1,0 +1,110 @@
+@using MudBlazor
+@using System.Collections.Generic
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">Self-Referencing Hierarchical DataGrid</MudText>
+    <MudText Color="Color.Secondary" Class="mb-4">
+        This example demonstrates a task management system with hierarchical tasks and subtasks.
+        Click the expand buttons to reveal subtasks at different levels.
+    </MudText>
+
+    <MudDataGrid T="TaskItem" Items="@Items" SelfReferencingHierarchy="true" 
+                 ChildrenSelector="@(item => item.SubTasks)" 
+                 HierarchyIndentationSize="32"
+                 HierarchyVisibilityToggled="@OnHierarchyVisibilityToggled"
+                 Striped="true" Hover="true">
+        <Columns>
+            <HierarchyColumn />
+            <PropertyColumn Property="x => x.Title" Title="Task" />
+            <PropertyColumn Property="x => x.Status" Title="Status">
+                <CellTemplate>
+                    <MudChip Size="Size.Small" Color="@GetStatusColor(context.Item.Status)">
+                        @context.Item.Status
+                    </MudChip>
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.Priority" Title="Priority">
+                <CellTemplate>
+                    <MudRating ReadOnly="true" MaxValue="3" SelectedValue="@context.Item.Priority" Size="Size.Small" />
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.AssignedTo" Title="Assigned To">
+                <CellTemplate>
+                    <MudAvatar Size="Size.Small" Class="mr-2">@GetInitials(context.Item.AssignedTo)</MudAvatar>
+                    @context.Item.AssignedTo
+                </CellTemplate>
+            </PropertyColumn>
+            <PropertyColumn Property="x => x.DueDate" Title="Due Date" Format="yyyy-MM-dd" />
+        </Columns>
+    </MudDataGrid>
+
+    <MudText Typo="Typo.h6" Class="mt-4">Features Demonstrated</MudText>
+    <MudList>
+        <MudListItem Icon="@Icons.Material.Filled.AccountTree">Hierarchical task structure with multiple nesting levels</MudListItem>
+        <MudListItem Icon="@Icons.Material.Filled.FormatIndentIncrease">Automatic indentation based on task depth</MudListItem>
+        <MudListItem Icon="@Icons.Material.Filled.ExpandMore">Expand/collapse functionality for parent tasks</MudListItem>
+        <MudListItem Icon="@Icons.Material.Filled.ViewColumn">Perfect column alignment across all hierarchy levels</MudListItem>
+        <MudListItem Icon="@Icons.Material.Filled.Security">Protection against circular references and infinite recursion</MudListItem>
+    </MudList>
+
+    <MudText Typo="Typo.subtitle2" Class="mt-4">Total Hierarchy Events: @HierarchyToggledCount</MudText>
+</MudContainer>
+
+@code {
+    public record TaskItem(string Title, string Status, int Priority, string AssignedTo, DateTime? DueDate, List<TaskItem> SubTasks);
+
+    public List<TaskItem> Items = new()
+    {
+        new TaskItem("🚀 Project Alpha Launch", "In Progress", 3, "Alice Johnson", DateTime.Today.AddDays(30), new()
+        {
+            new TaskItem("📋 Requirements Analysis", "Complete", 2, "Alice Johnson", DateTime.Today.AddDays(-5), new()
+            {
+                new TaskItem("📊 Stakeholder Interviews", "Complete", 2, "Alice Johnson", DateTime.Today.AddDays(-10), new()),
+                new TaskItem("📝 Requirements Document", "Complete", 2, "Alice Johnson", DateTime.Today.AddDays(-7), new())
+            }),
+            new TaskItem("🎨 UI/UX Design", "In Progress", 3, "Bob Smith", DateTime.Today.AddDays(15), new()
+            {
+                new TaskItem("🖼️ Wireframes", "Complete", 2, "Bob Smith", DateTime.Today.AddDays(-2), new()),
+                new TaskItem("🎭 Visual Design", "In Progress", 3, "Bob Smith", DateTime.Today.AddDays(10), new()
+                {
+                    new TaskItem("🎨 Color Palette", "Complete", 1, "Bob Smith", DateTime.Today.AddDays(2), new()),
+                    new TaskItem("📱 Mobile Responsive Design", "To Do", 2, "Bob Smith", DateTime.Today.AddDays(8), new())
+                }),
+                new TaskItem("🔍 Usability Testing", "To Do", 2, "Charlie Brown", DateTime.Today.AddDays(12), new())
+            }),
+            new TaskItem("⚙️ Backend Development", "To Do", 3, "Diana Prince", DateTime.Today.AddDays(20), new()
+            {
+                new TaskItem("🗄️ Database Design", "To Do", 3, "Diana Prince", DateTime.Today.AddDays(5), new()),
+                new TaskItem("🔗 API Development", "To Do", 3, "Diana Prince", DateTime.Today.AddDays(15), new())
+            })
+        }),
+        new TaskItem("🔧 System Maintenance", "To Do", 1, "Eve Wilson", DateTime.Today.AddDays(60), new()
+        {
+            new TaskItem("🔄 Database Backup", "To Do", 2, "Eve Wilson", DateTime.Today.AddDays(7), new()),
+            new TaskItem("🛡️ Security Audit", "To Do", 3, "Frank Castle", DateTime.Today.AddDays(30), new())
+        }),
+        new TaskItem("📚 Documentation", "To Do", 1, "Grace Hopper", DateTime.Today.AddDays(45), new())
+    };
+
+    private int HierarchyToggledCount = 0;
+
+    private Task OnHierarchyVisibilityToggled(DataGridHierarchyVisibilityToggledEventArgs<TaskItem> args)
+    {
+        HierarchyToggledCount++;
+        return Task.CompletedTask;
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Complete" => Color.Success,
+        "In Progress" => Color.Warning,
+        "To Do" => Color.Info,
+        _ => Color.Default
+    };
+
+    private string GetInitials(string name)
+    {
+        var parts = name.Split(' ');
+        return parts.Length >= 2 ? $"{parts[0][0]}{parts[1][0]}" : name.Length > 0 ? name[0].ToString() : "?";
+    }
+}

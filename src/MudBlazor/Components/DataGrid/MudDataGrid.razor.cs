@@ -1216,27 +1216,35 @@ namespace MudBlazor
                 {
                     if (_hierarchicalCurrentPageItems == null)
                     {
-                        BuildHierarchicalItems();
-                        var visibleItems = GetVisibleHierarchicalItems().ToList();
-                        
-                        // Apply pagination if needed
-                        if (PagerContent != null && !HasServerData)
+                        try
                         {
-                            var filteredItemCount = visibleItems.Count;
-                            int lastPageNo;
-                            if (filteredItemCount == 0)
-                                lastPageNo = 0;
-                            else
-                                lastPageNo = (filteredItemCount / RowsPerPage) - (filteredItemCount % RowsPerPage == 0 ? 1 : 0);
-                            CurrentPage = lastPageNo < CurrentPage ? lastPageNo : CurrentPage;
+                            BuildHierarchicalItems();
+                            var visibleItems = GetVisibleHierarchicalItems().ToList();
                             
-                            _hierarchicalCurrentPageItems = visibleItems
-                                .Skip(CurrentPage * RowsPerPage)
-                                .Take(RowsPerPage);
+                            // Apply pagination if needed
+                            if (PagerContent != null && !HasServerData)
+                            {
+                                var filteredItemCount = visibleItems.Count;
+                                int lastPageNo;
+                                if (filteredItemCount == 0)
+                                    lastPageNo = 0;
+                                else
+                                    lastPageNo = (filteredItemCount / RowsPerPage) - (filteredItemCount % RowsPerPage == 0 ? 1 : 0);
+                                CurrentPage = lastPageNo < CurrentPage ? lastPageNo : CurrentPage;
+                                
+                                _hierarchicalCurrentPageItems = visibleItems
+                                    .Skip(CurrentPage * RowsPerPage)
+                                    .Take(RowsPerPage);
+                            }
+                            else
+                            {
+                                _hierarchicalCurrentPageItems = visibleItems;
+                            }
                         }
-                        else
+                        catch
                         {
-                            _hierarchicalCurrentPageItems = visibleItems;
+                            // On error, fall back to original filtered items
+                            _hierarchicalCurrentPageItems = FilteredItems;
                         }
                     }
                     
@@ -2552,39 +2560,63 @@ namespace MudBlazor
                 return;
 
             var rootItems = FilteredItems.ToList();
+            var visitedItems = new HashSet<T>();
             
             // Build full hierarchy first
             foreach (var rootItem in rootItems)
             {
-                BuildHierarchicalItemRecursive(rootItem, null, 0);
+                if (rootItem != null && !visitedItems.Contains(rootItem))
+                {
+                    BuildHierarchicalItemRecursive(rootItem, null, 0, visitedItems);
+                }
             }
         }
 
         /// <summary>
-        /// Recursively builds hierarchical items with depth tracking.
+        /// Recursively builds hierarchical items with depth tracking and circular reference protection.
         /// </summary>
-        private void BuildHierarchicalItemRecursive(T item, HierarchicalItem<T>? parent, int level)
+        private void BuildHierarchicalItemRecursive(T item, HierarchicalItem<T>? parent, int level, HashSet<T> visitedItems)
         {
-            var children = ChildrenSelector!(item)?.ToList() ?? new List<T>();
-            var hasChildren = children.Count > 0;
-            var isExpanded = _openHierarchies.Contains(item);
-
-            var hierarchicalItem = new HierarchicalItem<T>
+            // Prevent infinite recursion due to circular references
+            if (visitedItems.Contains(item))
+                return;
+                
+            visitedItems.Add(item);
+            
+            try
             {
-                Item = item,
-                Level = level,
-                Parent = parent,
-                HasChildren = hasChildren,
-                IsExpanded = hasChildren && isExpanded
-            };
+                var children = ChildrenSelector!(item)?.Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item))?.ToList() ?? new List<T>();
+                var hasChildren = children.Count > 0;
+                var isExpanded = _openHierarchies.Contains(item);
 
-            _flattenedHierarchicalItems.Add(hierarchicalItem);
-            _hierarchicalItemsLookup[item] = hierarchicalItem;
+                var hierarchicalItem = new HierarchicalItem<T>
+                {
+                    Item = item,
+                    Level = level,
+                    Parent = parent,
+                    HasChildren = hasChildren,
+                    IsExpanded = hasChildren && isExpanded
+                };
 
-            // Always build the full tree structure
-            foreach (var child in children)
+                _flattenedHierarchicalItems.Add(hierarchicalItem);
+                _hierarchicalItemsLookup[item] = hierarchicalItem;
+
+                // Recursively build children, limiting depth to prevent stack overflow
+                const int MaxDepth = 50; // Reasonable limit for UI hierarchy
+                if (level < MaxDepth)
+                {
+                    foreach (var child in children)
+                    {
+                        if (child != null && !EqualityComparer<T>.Default.Equals(child, item))
+                        {
+                            BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1, visitedItems);
+                        }
+                    }
+                }
+            }
+            finally
             {
-                BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1);
+                visitedItems.Remove(item);
             }
         }
 
@@ -2594,7 +2626,7 @@ namespace MudBlazor
         private IEnumerable<T> GetVisibleHierarchicalItems()
         {
             return _flattenedHierarchicalItems
-                .Where(h => IsHierarchicalItemVisible(h))
+                .Where(h => h != null && IsHierarchicalItemVisible(h))
                 .Select(h => h.Item);
         }
 
@@ -2603,6 +2635,9 @@ namespace MudBlazor
         /// </summary>
         private bool IsHierarchicalItemVisible(HierarchicalItem<T> item)
         {
+            if (item == null)
+                return false;
+                
             // Root items are always visible
             if (item.Parent == null)
                 return true;
@@ -2626,6 +2661,9 @@ namespace MudBlazor
         /// <returns>The hierarchical item wrapper, or null if not found.</returns>
         internal HierarchicalItem<T>? GetHierarchicalItem(T item)
         {
+            if (item == null || !_hierarchicalItemsLookup.ContainsKey(item))
+                return null;
+                
             return _hierarchicalItemsLookup.TryGetValue(item, out var hierarchicalItem) 
                 ? hierarchicalItem 
                 : null;

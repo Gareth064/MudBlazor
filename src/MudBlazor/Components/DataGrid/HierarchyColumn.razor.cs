@@ -174,6 +174,9 @@ public partial class HierarchyColumn<[DynamicallyAccessedMembers(DynamicallyAcce
     /// <returns>True if the expand button should be shown, otherwise false.</returns>
     private bool ShouldShowExpandButton(CellContext<T> context)
     {
+        if (context?.DataGrid == null || context.Item == null)
+            return false;
+            
         var dataGrid = context.DataGrid;
         
         // In self-referencing hierarchical mode, only show button if item has children
