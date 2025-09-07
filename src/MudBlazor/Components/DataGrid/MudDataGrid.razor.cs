@@ -2628,7 +2628,7 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         {
             if (rootItem != null && !visitedItems.Contains(rootItem))
             {
-                BuildHierarchicalItemRecursive(rootItem, null, 0, visitedItems, allFilteredItems);
+                BuildHierarchicalItemRecursive(rootItem, null, 0, visitedItems);
             }
         }
     }
@@ -2636,7 +2636,7 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     /// <summary>
     /// Recursively builds hierarchical items with depth tracking and circular reference protection.
     /// </summary>
-    private void BuildHierarchicalItemRecursive(T item, HierarchicalItem<T> parent, int level, HashSet<T> visitedItems, List<T> allFilteredItems)
+    private void BuildHierarchicalItemRecursive(T item, HierarchicalItem<T> parent, int level, HashSet<T> visitedItems)
     {
         // Prevent infinite recursion due to circular references
         if (visitedItems.Contains(item))
@@ -2646,19 +2646,8 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         
         try
         {
-            // Get ALL children (not just filtered ones) - this matches original behavior
-            var allChildren = ChildrenSelector!(item)?
-                .Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item))
-                .ToList() ?? new List<T>();
-            
-            // Filter children for hierarchy building - only include items that passed filtering
-            var filteredChildren = allChildren.Where(c => allFilteredItems.Contains(c)).ToList();
-            
-            // Apply sorting to filtered children at this level
-            var sortedChildren = ApplyHierarchicalSort(filteredChildren).ToList();
-            
-            // HasChildren is based on all children (original behavior)
-            var hasChildren = allChildren.Count > 0;
+            var children = ChildrenSelector!(item)?.Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item))?.ToList() ?? new List<T>();
+            var hasChildren = children.Count > 0;
             var isExpanded = _openHierarchies.Contains(item);
 
             var hierarchicalItem = new HierarchicalItem<T>
@@ -2673,16 +2662,15 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
             _flattenedHierarchicalItems.Add(hierarchicalItem);
             _hierarchicalItemsLookup[item] = hierarchicalItem;
 
-            // Recursively build ALL children (not just filtered ones) - this matches original behavior
-            // This ensures that when a parent is expanded, all children are available in the hierarchy
+            // Recursively build children, limiting depth to prevent stack overflow
             const int MaxDepth = 50; // Reasonable limit for UI hierarchy
             if (level < MaxDepth)
             {
-                foreach (var child in allChildren)
+                foreach (var child in children)
                 {
                     if (child != null && !EqualityComparer<T>.Default.Equals(child, item))
                     {
-                        BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1, visitedItems, allFilteredItems);
+                        BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1, visitedItems);
                     }
                 }
             }
@@ -2698,15 +2686,11 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     /// </summary>
     private IEnumerable<T> GetVisibleHierarchicalItems()
     {
-        var allFilteredItems = FilteredItemsOnly.ToHashSet();
-        
-        // Get all visible items (considering expansion state and filtering)
+        // Get all visible items (considering expansion state only, not filtering here)
         var visibleHierarchicalItems = _flattenedHierarchicalItems
-            .Where(h => h != null && 
-                       IsHierarchicalItemVisible(h) && 
-                       allFilteredItems.Contains(h.Item))
+            .Where(h => h != null && IsHierarchicalItemVisible(h))
             .ToList();
-            
+
         // Apply hierarchical sorting - sort items at each level independently
         var result = new List<T>();
         var processedItems = new HashSet<HierarchicalItem<T>>();
