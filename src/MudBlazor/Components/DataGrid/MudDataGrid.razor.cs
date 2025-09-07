@@ -2646,13 +2646,20 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         
         try
         {
-            var children = ChildrenSelector!(item)?
-                .Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item) && allFilteredItems.Contains(c))
+            // Get all children to determine if expand button should be shown
+            var allChildren = ChildrenSelector!(item)?
+                .Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item))
                 .ToList() ?? new List<T>();
             
-            // Apply sorting to children at this level
-            var sortedChildren = ApplyHierarchicalSort(children).ToList();
-            var hasChildren = sortedChildren.Count > 0;
+            // Get filtered children for actual hierarchy building and sorting
+            var filteredChildren = allChildren.Where(c => allFilteredItems.Contains(c)).ToList();
+            
+            // Apply sorting to filtered children at this level
+            var sortedChildren = ApplyHierarchicalSort(filteredChildren).ToList();
+            
+            // HasChildren is based on all children, not just filtered ones
+            // This ensures expand buttons show up even if children are filtered out
+            var hasChildren = allChildren.Count > 0;
             var isExpanded = _openHierarchies.Contains(item);
 
             var hierarchicalItem = new HierarchicalItem<T>
