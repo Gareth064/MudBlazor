@@ -2,7 +2,7 @@
 
 <MudDataGrid T="Employee" Items="@Employees" SelfReferencingHierarchy="true" 
              ChildrenSelector="@(item => item.DirectReports)" 
-             HierarchyIndentationSize="24"
+             HierarchyIndentationSize="@HierarchyIndentationSize"
              Striped="true" Hover="true">
     <Columns>
         <HierarchyColumn />
@@ -13,7 +13,13 @@
     </Columns>
 </MudDataGrid>
 
+<MudSlider @bind-Value="HierarchyIndentationSize" Min="0" Max="60" Color="Color.Primary" Class="mt-4">
+    Hierarchy Indentation: @HierarchyIndentationSize px
+</MudSlider>
+
 @code {
+    public int HierarchyIndentationSize { get; set; } = 24;
+
     public class Employee
     {
         public string Name { get; set; } = "";
