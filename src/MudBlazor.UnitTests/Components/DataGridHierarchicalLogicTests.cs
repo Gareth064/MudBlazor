@@ -2,6 +2,8 @@
 // MudBlazor licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+#pragma warning disable BL0005 // Set parameter outside component
+
 using FluentAssertions;
 using NUnit.Framework;
 using System.Collections.Generic;
