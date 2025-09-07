@@ -1300,14 +1300,12 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     internal uint FilteringRunCount { get; private set; }
 
     /// <summary>
-    /// The items which remain after applying filters.
+    /// The items which remain after applying filters only (without sorting for hierarchical use).
     /// </summary>
-    public IEnumerable<T> FilteredItems
+    private IEnumerable<T> FilteredItemsOnly
     {
-        // TODO: When adding one FilterDefinition, this is called once for each RenderedColumn...
         get
         {
-            if (_currentRenderFilteredItemsCache != null) return _currentRenderFilteredItemsCache;
             var items = HasServerData
                 ? _serverData.Items
                 : Items;
@@ -1330,7 +1328,30 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
                 }
             }
 
-            _currentRenderFilteredItemsCache = Sort(items).ToList(); // To list to ensure evaluation only once per render
+            return items;
+        }
+    }
+
+    /// <summary>
+    /// The items which remain after applying filters.
+    /// </summary>
+    public IEnumerable<T> FilteredItems
+    {
+        // TODO: When adding one FilterDefinition, this is called once for each RenderedColumn...
+        get
+        {
+            if (_currentRenderFilteredItemsCache != null) return _currentRenderFilteredItemsCache;
+            
+            // For hierarchical data, don't apply flat sorting here - it will be done hierarchically
+            if (SelfReferencingHierarchy && ChildrenSelector != null)
+            {
+                _currentRenderFilteredItemsCache = FilteredItemsOnly.ToList();
+            }
+            else
+            {
+                _currentRenderFilteredItemsCache = Sort(FilteredItemsOnly).ToList(); // To list to ensure evaluation only once per render
+            }
+            
             unchecked { FilteringRunCount++; }
             GroupItems(noStateChange: true);
             return _currentRenderFilteredItemsCache;
@@ -2496,6 +2517,8 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         {
             await HierarchyVisibilityToggled.InvokeAsync(new(item, true));
         }
+        // Invalidate hierarchical items to ensure proper sorting after expansion
+        InvalidateHierarchicalItems();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -2509,6 +2532,8 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
             await HierarchyVisibilityToggled.InvokeAsync(new(openedHierarchy, false));
             _openHierarchies.Remove(openedHierarchy);
         }
+        // Invalidate hierarchical items to ensure proper sorting after collapse
+        InvalidateHierarchicalItems();
         await InvokeAsync(StateHasChanged);
     }
 
@@ -2549,6 +2574,32 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     }
 
     /// <summary>
+    /// Applies sorting to a collection of items using the current sort definitions.
+    /// </summary>
+    private IEnumerable<T> ApplyHierarchicalSort(IEnumerable<T> items)
+    {
+        if (null == items || !items.Any())
+            return items;
+
+        if (null == SortDefinitions || 0 == SortDefinitions.Count)
+            return items;
+
+        IOrderedEnumerable<T> orderedEnumerable = null;
+
+        foreach (var sortDefinition in SortDefinitions.Values.Where(sd => sd.SortFunc != null).OrderBy(sd => sd.Index))
+        {
+            if (null == orderedEnumerable)
+                orderedEnumerable = sortDefinition.Descending ? items.OrderByDescending(item => sortDefinition.SortFunc(item), sortDefinition.Comparer)
+                    : items.OrderBy(item => sortDefinition.SortFunc(item), sortDefinition.Comparer);
+            else
+                orderedEnumerable = sortDefinition.Descending ? orderedEnumerable.ThenByDescending(item => sortDefinition.SortFunc(item), sortDefinition.Comparer)
+                    : orderedEnumerable.ThenBy(item => sortDefinition.SortFunc(item), sortDefinition.Comparer);
+        }
+
+        return orderedEnumerable ?? items;
+    }
+
+    /// <summary>
     /// Builds the flattened hierarchical items list from the original items.
     /// </summary>
     private void BuildHierarchicalItems()
@@ -2559,15 +2610,25 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         if (ChildrenSelector == null)
             return;
 
-        var rootItems = FilteredItems.ToList();
+        // Use filtered items only, without flat sorting - we'll sort hierarchically
+        var allFilteredItems = FilteredItemsOnly.ToList();
         var visitedItems = new HashSet<T>();
         
-        // Build full hierarchy first
-        foreach (var rootItem in rootItems)
+        // Find root items (items that are not children of any other item)
+        var rootItems = allFilteredItems.Where(item => 
+            !allFilteredItems.Any(potentialParent => 
+                potentialParent != null && !EqualityComparer<T>.Default.Equals(potentialParent, item) &&
+                ChildrenSelector(potentialParent)?.Contains(item) == true)).ToList();
+        
+        // Apply sorting to root items
+        var sortedRootItems = ApplyHierarchicalSort(rootItems);
+        
+        // Build full hierarchy with sorted roots
+        foreach (var rootItem in sortedRootItems)
         {
             if (rootItem != null && !visitedItems.Contains(rootItem))
             {
-                BuildHierarchicalItemRecursive(rootItem, null, 0, visitedItems);
+                BuildHierarchicalItemRecursive(rootItem, null, 0, visitedItems, allFilteredItems);
             }
         }
     }
@@ -2575,7 +2636,7 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     /// <summary>
     /// Recursively builds hierarchical items with depth tracking and circular reference protection.
     /// </summary>
-    private void BuildHierarchicalItemRecursive(T item, HierarchicalItem<T> parent, int level, HashSet<T> visitedItems)
+    private void BuildHierarchicalItemRecursive(T item, HierarchicalItem<T> parent, int level, HashSet<T> visitedItems, List<T> allFilteredItems)
     {
         // Prevent infinite recursion due to circular references
         if (visitedItems.Contains(item))
@@ -2585,8 +2646,13 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         
         try
         {
-            var children = ChildrenSelector!(item)?.Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item))?.ToList() ?? new List<T>();
-            var hasChildren = children.Count > 0;
+            var children = ChildrenSelector!(item)?
+                .Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item) && allFilteredItems.Contains(c))
+                .ToList() ?? new List<T>();
+            
+            // Apply sorting to children at this level
+            var sortedChildren = ApplyHierarchicalSort(children).ToList();
+            var hasChildren = sortedChildren.Count > 0;
             var isExpanded = _openHierarchies.Contains(item);
 
             var hierarchicalItem = new HierarchicalItem<T>
@@ -2605,11 +2671,11 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
             const int MaxDepth = 50; // Reasonable limit for UI hierarchy
             if (level < MaxDepth)
             {
-                foreach (var child in children)
+                foreach (var child in sortedChildren)
                 {
                     if (child != null && !EqualityComparer<T>.Default.Equals(child, item))
                     {
-                        BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1, visitedItems);
+                        BuildHierarchicalItemRecursive(child, hierarchicalItem, level + 1, visitedItems, allFilteredItems);
                     }
                 }
             }
@@ -2667,6 +2733,25 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         return _hierarchicalItemsLookup.TryGetValue(item, out var hierarchicalItem) 
             ? hierarchicalItem 
             : null;
+    }
+
+    /// <summary>
+    /// Gets the hierarchical item wrapper for a given data item.
+    /// </summary>
+    /// <param name="item">The data item to look up.</param>
+    /// <returns>The hierarchical item wrapper, or null if not found.</returns>
+    internal HierarchicalItem<T> GetHierarchicalItem(T item)
+    {
+        if (item == null || !SelfReferencingHierarchy)
+            return null;
+            
+        // Ensure hierarchical items are built
+        if (_hierarchicalItemsLookup.Count == 0)
+        {
+            BuildHierarchicalItems();
+        }
+        
+        return _hierarchicalItemsLookup.TryGetValue(item, out var hierarchicalItem) ? hierarchicalItem : null;
     }
 
     /// <summary>
