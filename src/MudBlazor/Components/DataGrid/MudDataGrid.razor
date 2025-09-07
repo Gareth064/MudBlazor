@@ -363,64 +363,79 @@
         @<text>
              @{
                  var cell = new Cell<T>(this, column, item);
+                 var shouldShowExpander = SelfReferencingHierarchy && IsFirstDataColumn(column) && ShouldShowExpandButtonForSelfReferencing(item);
              }
              <td data-label="@column.Title" class="@cell.ComputedClass" style="@cell.ComputedStyle">
-                 @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
+                 @* Add expander button for self-referencing hierarchy in the first data column *@
+                 @if (shouldShowExpander)
                  {
-                     if (column.EditTemplate is not null)
-                     {
-                         @column.EditTemplate(cell._cellContext)
-                     }
-                     else
-                     {
-                         if (column.PropertyType == typeof(string))
-                         {
-                             <MudTextField T="string"
-                                           Value="@cell._valueString"
-                                           ValueChanged="@cell.StringValueChangedAsync"
-                                           Margin="@Margin.Dense" Style="margin-top:0"
-                                           Required=column.Required
-                                           Variant="@Variant.Text"/>
-                         }
-                         else if (column.isNumber)
-                         {
-                             <MudNumericField T="double?"
-                                              Value="@cell._valueNumber"
-                                              ValueChanged="@cell.NumberValueChangedAsync"
-                                              Margin="@Margin.Dense" Style="margin-top:0"
-                                              Required=column.Required Variant="@Variant.Text" Culture="@column.Culture"/>
-                         }
-                     }
+                     <MudIconButton 
+                         Class="ma-n3 pa-1" 
+                         Icon="@GetGroupIcon(_openHierarchies.Contains(item), RightToLeft)" 
+                         OnClick="@(() => ToggleHierarchyVisibilityAsync(item))"
+                         Size="@Size.Medium"
+                         Style="display: inline-block; vertical-align: top;" />
                  }
-                 else
-                 {
-                     if (column.CellTemplate is not null)
+                 
+                 @* Render the actual cell content *@
+                 <span style="@(shouldShowExpander ? "display: inline-block; vertical-align: top;" : "")">
+                     @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
                      {
-                         @column.CellTemplate(cell._cellContext)
-                     }
-                     else if (column.Culture is not null && column.isNumber)
-                     {
-                         if (column.ContentFormat is not null)
+                         if (column.EditTemplate is not null)
                          {
-                             @(((IFormattable)cell._valueNumber)?.ToString(column.ContentFormat, column.Culture))
+                             @column.EditTemplate(cell._cellContext)
                          }
                          else
                          {
-                             @cell._valueNumber?.ToString(column.Culture)
+                             if (column.PropertyType == typeof(string))
+                             {
+                                 <MudTextField T="string"
+                                               Value="@cell._valueString"
+                                               ValueChanged="@cell.StringValueChangedAsync"
+                                               Margin="@Margin.Dense" Style="margin-top:0"
+                                               Required=column.Required
+                                               Variant="@Variant.Text"/>
+                             }
+                             else if (column.isNumber)
+                             {
+                                 <MudNumericField T="double?"
+                                                  Value="@cell._valueNumber"
+                                                  ValueChanged="@cell.NumberValueChangedAsync"
+                                                  Margin="@Margin.Dense" Style="margin-top:0"
+                                                  Required=column.Required Variant="@Variant.Text" Culture="@column.Culture"/>
+                             }
                          }
                      }
                      else
                      {
-                         if (column.ContentFormat is not null)
+                         if (column.CellTemplate is not null)
                          {
-                             @(((IFormattable)cell.ComputedValue)?.ToString(column.ContentFormat, column.Culture))
+                             @column.CellTemplate(cell._cellContext)
+                         }
+                         else if (column.Culture is not null && column.isNumber)
+                         {
+                             if (column.ContentFormat is not null)
+                             {
+                                 @(((IFormattable)cell._valueNumber)?.ToString(column.ContentFormat, column.Culture))
+                             }
+                             else
+                             {
+                                 @cell._valueNumber?.ToString(column.Culture)
+                             }
                          }
                          else
                          {
-                             @cell.ComputedValue
+                             if (column.ContentFormat is not null)
+                             {
+                                 @(((IFormattable)cell.ComputedValue)?.ToString(column.ContentFormat, column.Culture))
+                             }
+                             else
+                             {
+                                 @cell.ComputedValue
+                             }
                          }
                      }
-                 }
+                 </span>
              </td>
          </text>;
 

@@ -2746,6 +2746,32 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     }
 
     /// <summary>
+    /// Determines whether to show the expand button for a given item in self-referencing hierarchical mode.
+    /// </summary>
+    /// <param name="item">The data item to check.</param>
+    /// <returns>True if the expand button should be shown, otherwise false.</returns>
+    internal bool ShouldShowExpandButtonForSelfReferencing(T item)
+    {
+        if (item == null || !SelfReferencingHierarchy || ChildrenSelector == null)
+            return false;
+            
+        var hierarchicalItem = GetHierarchicalItem(item);
+        return hierarchicalItem?.HasChildren == true;
+    }
+
+    /// <summary>
+    /// Determines if a column is the first data column (excluding special columns like hierarchy or select columns).
+    /// </summary>
+    /// <param name="column">The column to check.</param>
+    /// <returns>True if this is the first data column, otherwise false.</returns>
+    internal bool IsFirstDataColumn(Column<T> column)
+    {
+        var firstDataColumn = RenderedColumns
+            .FirstOrDefault(c => c.Tag?.ToString() != "hierarchy-column" && c.Tag?.ToString() != "select-column");
+        return firstDataColumn == column;
+    }
+
+    /// <summary>
     /// Invalidates the hierarchical items cache, forcing a rebuild on the next access.
     /// </summary>
     private void InvalidateHierarchicalItems()
