@@ -1,9 +1,11 @@
 ﻿@namespace MudBlazor.Docs.Examples
 
-<MudDataGrid T="Employee" Items="@Employees" SelfReferencingHierarchy="true" 
-             ChildrenSelector="@(item => item.DirectReports)" 
-             HierarchyIndentationSize="@HierarchyIndentationSize">
+<MudDataGrid T="Employee" Items="@Employees" SelfReferencingHierarchy="true"
+             ChildrenSelector="@(item => item.DirectReports)"
+             HierarchyIndentationSize="@HierarchyIndentationSize"
+MultiSelection="true">
     <Columns>
+        <SelectColumn T="Employee" />
         <PropertyColumn Property="x => x.Name" Title="Name" />
         <PropertyColumn Property="x => x.Position" Title="Position" />
         <PropertyColumn Property="x => x.Department" Title="Department" />
