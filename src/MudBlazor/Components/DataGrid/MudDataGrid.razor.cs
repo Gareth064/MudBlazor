@@ -2720,20 +2720,7 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         return true;
     }
 
-    /// <summary>
-    /// Gets the hierarchical item wrapper for a given data item.
-    /// </summary>
-    /// <param name="item">The data item.</param>
-    /// <returns>The hierarchical item wrapper, or null if not found.</returns>
-    internal HierarchicalItem<T> GetHierarchicalItem(T item)
-    {
-        if (item == null || !_hierarchicalItemsLookup.ContainsKey(item))
-            return null;
-            
-        return _hierarchicalItemsLookup.TryGetValue(item, out var hierarchicalItem) 
-            ? hierarchicalItem 
-            : null;
-    }
+
 
     /// <summary>
     /// Gets the hierarchical item wrapper for a given data item.
