@@ -2054,7 +2054,14 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         {
             await InvokeServerLoadFunc();
             if (!HasServerData)
+            {
+                // Invalidate hierarchical cache when sorting changes so UI updates immediately
+                if (SelfReferencingHierarchy)
+                {
+                    InvalidateHierarchicalItems();
+                }
                 StateHasChanged();
+            }
         }
     }
 
