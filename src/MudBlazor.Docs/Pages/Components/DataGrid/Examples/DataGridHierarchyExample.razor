@@ -1,4 +1,4 @@
-@namespace MudBlazor.Docs.Examples
+﻿@namespace MudBlazor.Docs.Examples
 
 <MudDataGrid T="Employee" Items="@Employees" SelfReferencingHierarchy="true" 
              ChildrenSelector="@(item => item.DirectReports)" 
@@ -30,91 +30,624 @@
     }
 
     private List<Employee> Employees = new()
+{
+    new Employee
     {
-        new Employee
+        Name = "Sarah Johnson",
+        Position = "CEO",
+        Department = "Executive",
+        Email = "sarah.johnson@company.com",
+        DirectReports = new()
         {
-            Name = "Sarah Johnson",
-            Position = "CEO",
-            Department = "Executive",
-            Email = "sarah.johnson@company.com",
-            DirectReports = new()
+            new Employee
             {
-                new Employee
+                Name = "Michael Chen",
+                Position = "VP of Engineering",
+                Department = "Engineering",
+                Email = "michael.chen@company.com",
+                DirectReports = new()
                 {
-                    Name = "Michael Chen",
-                    Position = "VP of Engineering",
-                    Department = "Engineering",
-                    Email = "michael.chen@company.com",
-                    DirectReports = new()
+                    new Employee
                     {
-                        new Employee
+                        Name = "Emily Davis",
+                        Position = "Senior Developer",
+                        Department = "Engineering",
+                        Email = "emily.davis@company.com",
+                        DirectReports = new()
                         {
-                            Name = "Emily Davis",
-                            Position = "Senior Developer",
-                            Department = "Engineering",
-                            Email = "emily.davis@company.com",
-                            DirectReports = new()
+                            new Employee
                             {
-                                new Employee
-                                {
-                                    Name = "James Wilson",
-                                    Position = "Junior Developer",
-                                    Department = "Engineering",
-                                    Email = "james.wilson@company.com"
-                                },
-                                new Employee
-                                {
-                                    Name = "Lisa Zhang",
-                                    Position = "Junior Developer", 
-                                    Department = "Engineering",
-                                    Email = "lisa.zhang@company.com"
-                                }
+                                Name = "James Wilson",
+                                Position = "Junior Developer",
+                                Department = "Engineering",
+                                Email = "james.wilson@company.com"
+                            },
+                            new Employee
+                            {
+                                Name = "Lisa Zhang",
+                                Position = "Junior Developer",
+                                Department = "Engineering",
+                                Email = "lisa.zhang@company.com"
                             }
-                        },
-                        new Employee
+                        }
+                    },
+                    new Employee
+                    {
+                        Name = "David Rodriguez",
+                        Position = "DevOps Engineer",
+                        Department = "Engineering",
+                        Email = "david.rodriguez@company.com",
+                        DirectReports = new()
                         {
-                            Name = "David Rodriguez",
-                            Position = "DevOps Engineer",
-                            Department = "Engineering",
-                            Email = "david.rodriguez@company.com"
+                            new Employee
+                            {
+                                Name = "Alex Morgan",
+                                Position = "Cloud Infrastructure Specialist",
+                                Department = "Engineering",
+                                Email = "alex.morgan@company.com"
+                            }
                         }
                     }
-                },
-                new Employee
+                }
+            },
+            new Employee
+            {
+                Name = "Anna Thompson",
+                Position = "VP of Marketing",
+                Department = "Marketing",
+                Email = "anna.thompson@company.com",
+                DirectReports = new()
                 {
-                    Name = "Anna Thompson",
-                    Position = "VP of Marketing",
-                    Department = "Marketing",
-                    Email = "anna.thompson@company.com",
-                    DirectReports = new()
+                    new Employee
                     {
-                        new Employee
+                        Name = "Mark Stevens",
+                        Position = "Marketing Manager",
+                        Department = "Marketing",
+                        Email = "mark.stevens@company.com",
+                        DirectReports = new()
                         {
-                            Name = "Mark Stevens",
-                            Position = "Marketing Manager",
-                            Department = "Marketing",
-                            Email = "mark.stevens@company.com",
-                            DirectReports = new()
+                            new Employee
                             {
-                                new Employee
-                                {
-                                    Name = "Jennifer Lee",
-                                    Position = "Content Specialist",
-                                    Department = "Marketing",
-                                    Email = "jennifer.lee@company.com"
-                                }
+                                Name = "Jennifer Lee",
+                                Position = "Content Specialist",
+                                Department = "Marketing",
+                                Email = "jennifer.lee@company.com"
+                            },
+                            new Employee
+                            {
+                                Name = "Carlos Mendez",
+                                Position = "Social Media Coordinator",
+                                Department = "Marketing",
+                                Email = "carlos.mendez@company.com"
                             }
-                        },
-                        new Employee
+                        }
+                    },
+                    new Employee
+                    {
+                        Name = "Robert Kim",
+                        Position = "Digital Marketing Specialist",
+                        Department = "Marketing",
+                        Email = "robert.kim@company.com"
+                    }
+                }
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Rachel Martinez",
+        Position = "Chief Financial Officer",
+        Department = "Finance",
+        Email = "rachel.martinez@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Kevin Park",
+                Position = "Finance Manager",
+                Department = "Finance",
+                Email = "kevin.park@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Sophie Turner",
+                        Position = "Senior Accountant",
+                        Department = "Finance",
+                        Email = "sophie.turner@company.com",
+                        DirectReports = new()
                         {
-                            Name = "Robert Kim",
-                            Position = "Digital Marketing Specialist",
-                            Department = "Marketing",
-                            Email = "robert.kim@company.com"
+                            new Employee
+                            {
+                                Name = "Daniel Brown",
+                                Position = "Junior Accountant",
+                                Department = "Finance",
+                                Email = "daniel.brown@company.com"
+                            }
+                        }
+                    },
+                    new Employee
+                    {
+                        Name = "Nina Patel",
+                        Position = "Financial Analyst",
+                        Department = "Finance",
+                        Email = "nina.patel@company.com"
+                    }
+                }
+            },
+            new Employee
+            {
+                Name = "Thomas Wright",
+                Position = "Budget Planning Manager",
+                Department = "Finance",
+                Email = "thomas.wright@company.com"
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Jonathan Hayes",
+        Position = "VP of Sales",
+        Department = "Sales",
+        Email = "jonathan.hayes@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Maria Gonzalez",
+                Position = "Sales Manager",
+                Department = "Sales",
+                Email = "maria.gonzalez@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Ryan Cooper",
+                        Position = "Senior Sales Representative",
+                        Department = "Sales",
+                        Email = "ryan.cooper@company.com",
+                        DirectReports = new()
+                        {
+                            new Employee
+                            {
+                                Name = "Ashley Miller",
+                                Position = "Sales Representative",
+                                Department = "Sales",
+                                Email = "ashley.miller@company.com"
+                            },
+                            new Employee
+                            {
+                                Name = "Brandon Lee",
+                                Position = "Sales Representative",
+                                Department = "Sales",
+                                Email = "brandon.lee@company.com"
+                            }
+                        }
+                    }
+                }
+            },
+            new Employee
+            {
+                Name = "Victoria Adams",
+                Position = "Business Development Manager",
+                Department = "Sales",
+                Email = "victoria.adams@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Eric Johnson",
+                        Position = "BD Representative",
+                        Department = "Sales",
+                        Email = "eric.johnson@company.com"
+                    }
+                }
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Patricia Williams",
+        Position = "VP of Human Resources",
+        Department = "Human Resources",
+        Email = "patricia.williams@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Christopher Davis",
+                Position = "HR Manager",
+                Department = "Human Resources",
+                Email = "christopher.davis@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Amanda Foster",
+                        Position = "HR Specialist",
+                        Department = "Human Resources",
+                        Email = "amanda.foster@company.com"
+                    },
+                    new Employee
+                    {
+                        Name = "Marcus Thompson",
+                        Position = "Recruiter",
+                        Department = "Human Resources",
+                        Email = "marcus.thompson@company.com"
+                    }
+                }
+            },
+            new Employee
+            {
+                Name = "Helen Chang",
+                Position = "Training Coordinator",
+                Department = "Human Resources",
+                Email = "helen.chang@company.com"
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Gregory Scott",
+        Position = "Chief Technology Officer",
+        Department = "Technology",
+        Email = "gregory.scott@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Laura Bennett",
+                Position = "IT Manager",
+                Department = "Technology",
+                Email = "laura.bennett@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Steven Walsh",
+                        Position = "Systems Administrator",
+                        Department = "Technology",
+                        Email = "steven.walsh@company.com",
+                        DirectReports = new()
+                        {
+                            new Employee
+                            {
+                                Name = "Michelle Garcia",
+                                Position = "IT Support Specialist",
+                                Department = "Technology",
+                                Email = "michelle.garcia@company.com"
+                            }
+                        }
+                    },
+                    new Employee
+                    {
+                        Name = "Timothy Rodriguez",
+                        Position = "Network Engineer",
+                        Department = "Technology",
+                        Email = "timothy.rodriguez@company.com"
+                    }
+                }
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Diana Brooks",
+        Position = "VP of Operations",
+        Department = "Operations",
+        Email = "diana.brooks@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Andrew Mitchell",
+                Position = "Operations Manager",
+                Department = "Operations",
+                Email = "andrew.mitchell@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Samantha Reed",
+                        Position = "Process Analyst",
+                        Department = "Operations",
+                        Email = "samantha.reed@company.com"
+                    },
+                    new Employee
+                    {
+                        Name = "Nathan Clark",
+                        Position = "Quality Assurance Specialist",
+                        Department = "Operations",
+                        Email = "nathan.clark@company.com"
+                    }
+                }
+            },
+            new Employee
+            {
+                Name = "Rebecca Torres",
+                Position = "Supply Chain Coordinator",
+                Department = "Operations",
+                Email = "rebecca.torres@company.com"
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Benjamin Taylor",
+        Position = "VP of Product",
+        Department = "Product",
+        Email = "benjamin.taylor@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Olivia Parker",
+                Position = "Product Manager",
+                Department = "Product",
+                Email = "olivia.parker@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Jacob Anderson",
+                        Position = "Product Analyst",
+                        Department = "Product",
+                        Email = "jacob.anderson@company.com"
+                    },
+                    new Employee
+                    {
+                        Name = "Isabella Martinez",
+                        Position = "UX Designer",
+                        Department = "Product",
+                        Email = "isabella.martinez@company.com",
+                        DirectReports = new()
+                        {
+                            new Employee
+                            {
+                                Name = "Ethan Young",
+                                Position = "UI Designer",
+                                Department = "Product",
+                                Email = "ethan.young@company.com"
+                            }
                         }
                     }
                 }
             }
         }
-    };
+    },
+    new Employee
+    {
+        Name = "Sandra White",
+        Position = "VP of Customer Success",
+        Department = "Customer Success",
+        Email = "sandra.white@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Richard Lewis",
+                Position = "Customer Success Manager",
+                Department = "Customer Success",
+                Email = "richard.lewis@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Cynthia Hall",
+                        Position = "Customer Success Specialist",
+                        Department = "Customer Success",
+                        Email = "cynthia.hall@company.com"
+                    },
+                    new Employee
+                    {
+                        Name = "Paul Allen",
+                        Position = "Customer Support Representative",
+                        Department = "Customer Success",
+                        Email = "paul.allen@company.com"
+                    }
+                }
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "William Green",
+        Position = "VP of Legal",
+        Department = "Legal",
+        Email = "william.green@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Catherine Moore",
+                Position = "Senior Legal Counsel",
+                Department = "Legal",
+                Email = "catherine.moore@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Adam Baker",
+                        Position = "Legal Associate",
+                        Department = "Legal",
+                        Email = "adam.baker@company.com"
+                    }
+                }
+            },
+            new Employee
+            {
+                Name = "Monica Evans",
+                Position = "Compliance Officer",
+                Department = "Legal",
+                Email = "monica.evans@company.com"
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Frank Robinson",
+        Position = "VP of Research & Development",
+        Department = "R&D",
+        Email = "frank.robinson@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Dr. Karen Phillips",
+                Position = "Research Manager",
+                Department = "R&D",
+                Email = "karen.phillips@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Peter Campbell",
+                        Position = "Senior Researcher",
+                        Department = "R&D",
+                        Email = "peter.campbell@company.com",
+                        DirectReports = new()
+                        {
+                            new Employee
+                            {
+                                Name = "Grace Collins",
+                                Position = "Research Associate",
+                                Department = "R&D",
+                                Email = "grace.collins@company.com"
+                            }
+                        }
+                    }
+                }
+            },
+            new Employee
+            {
+                Name = "Harold Stewart",
+                Position = "Innovation Specialist",
+                Department = "R&D",
+                Email = "harold.stewart@company.com"
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Jessica Carter",
+        Position = "VP of Business Intelligence",
+        Department = "Business Intelligence",
+        Email = "jessica.carter@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Logan Murphy",
+                Position = "Data Analytics Manager",
+                Department = "Business Intelligence",
+                Email = "logan.murphy@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Megan Rivera",
+                        Position = "Data Analyst",
+                        Department = "Business Intelligence",
+                        Email = "megan.rivera@company.com"
+                    },
+                    new Employee
+                    {
+                        Name = "Tyler Wood",
+                        Position = "Business Analyst",
+                        Department = "Business Intelligence",
+                        Email = "tyler.wood@company.com"
+                    }
+                }
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Dorothy Hughes",
+        Position = "VP of Quality Assurance",
+        Department = "Quality Assurance",
+        Email = "dorothy.hughes@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Roger Price",
+                Position = "QA Manager",
+                Department = "Quality Assurance",
+                Email = "roger.price@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Kelly Ward",
+                        Position = "QA Engineer",
+                        Department = "Quality Assurance",
+                        Email = "kelly.ward@company.com",
+                        DirectReports = new()
+                        {
+                            new Employee
+                            {
+                                Name = "Jesse Barnes",
+                                Position = "QA Tester",
+                                Department = "Quality Assurance",
+                                Email = "jesse.barnes@company.com"
+                            }
+                        }
+                    },
+                    new Employee
+                    {
+                        Name = "Crystal Powell",
+                        Position = "Test Automation Engineer",
+                        Department = "Quality Assurance",
+                        Email = "crystal.powell@company.com"
+                    }
+                }
+            }
+        }
+    },
+    new Employee
+    {
+        Name = "Ralph Edwards",
+        Position = "VP of Facilities",
+        Department = "Facilities",
+        Email = "ralph.edwards@company.com",
+        DirectReports = new()
+        {
+            new Employee
+            {
+                Name = "Sharon Cox",
+                Position = "Facilities Manager",
+                Department = "Facilities",
+                Email = "sharon.cox@company.com",
+                DirectReports = new()
+                {
+                    new Employee
+                    {
+                        Name = "Gerald Butler",
+                        Position = "Maintenance Supervisor",
+                        Department = "Facilities",
+                        Email = "gerald.butler@company.com",
+                        DirectReports = new()
+                        {
+                            new Employee
+                            {
+                                Name = "Beverly Gray",
+                                Position = "Maintenance Technician",
+                                Department = "Facilities",
+                                Email = "beverly.gray@company.com"
+                            }
+                        }
+                    },
+                    new Employee
+                    {
+                        Name = "Eugene Ross",
+                        Position = "Security Coordinator",
+                        Department = "Facilities",
+                        Email = "eugene.ross@company.com"
+                    }
+                }
+            }
+        }
+    }
+};
 }
