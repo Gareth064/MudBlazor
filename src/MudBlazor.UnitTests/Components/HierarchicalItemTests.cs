@@ -27,15 +27,36 @@ public class HierarchicalItemTests
         item.GetIndentationStyle(24).Should().Be("", "Level 0 should have no indentation");
 
         // Level 1
-        item = item with { Level = 1 };
+        item = new HierarchicalItem<string>
+        {
+            Item = item.Item,
+            Level = 1,
+            Parent = item.Parent,
+            HasChildren = item.HasChildren,
+            IsExpanded = item.IsExpanded
+        };
         item.GetIndentationStyle(24).Should().Be("padding-left: 24px;");
 
         // Level 2
-        item = item with { Level = 2 };
+        item = new HierarchicalItem<string>
+        {
+            Item = item.Item,
+            Level = 2,
+            Parent = item.Parent,
+            HasChildren = item.HasChildren,
+            IsExpanded = item.IsExpanded
+        };
         item.GetIndentationStyle(24).Should().Be("padding-left: 48px;");
 
         // Custom indentation size
-        item = item with { Level = 1 };
+        item = new HierarchicalItem<string>
+        {
+            Item = item.Item,
+            Level = 1,
+            Parent = item.Parent,
+            HasChildren = item.HasChildren,
+            IsExpanded = item.IsExpanded
+        };
         item.GetIndentationStyle(16).Should().Be("padding-left: 16px;");
     }
 
