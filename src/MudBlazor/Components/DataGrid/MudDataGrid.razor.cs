@@ -2754,6 +2754,8 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     private void InvalidateHierarchicalItems()
     {
         _hierarchicalCurrentPageItems = null;
+        _flattenedHierarchicalItems.Clear();
+        _hierarchicalItemsLookup.Clear();
     }
 
 
