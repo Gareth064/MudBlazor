@@ -363,20 +363,29 @@
         @<text>
              @{
                  var cell = new Cell<T>(this, column, item);
-                 var shouldShowExpander = SelfReferencingHierarchy && IsFirstDataColumn(column) && ShouldShowExpandButtonForSelfReferencing(item);
+                 var isFirstColumnInHierarchy = SelfReferencingHierarchy && IsFirstDataColumn(column);
+                 var shouldShowExpander = isFirstColumnInHierarchy && ShouldShowExpandButtonForSelfReferencing(item);
              }
              <td data-label="@column.Title" class="@cell.ComputedClass" style="@cell.ComputedStyle">
                  <MudStack Row="true" AlignItems="AlignItems.Center">
-                 @if (shouldShowExpander)
+                 @if (isFirstColumnInHierarchy)
                  {
-                     <MudIconButton 
-                         Class="pa-1" 
-                         Icon="@GetGroupIcon(_openHierarchies.Contains(item), RightToLeft)" 
-                         OnClick="@(() => ToggleHierarchyVisibilityAsync(item))"
-                         Size="@Size.Medium"
-                         Style="display: inline-block; vertical-align: top;" />
+                     @if (shouldShowExpander)
+                     {
+                         <MudIconButton 
+                             Class="pa-1" 
+                             Icon="@GetGroupIcon(_openHierarchies.Contains(item), RightToLeft)" 
+                             OnClick="@(() => ToggleHierarchyVisibilityAsync(item))"
+                             Size="@Size.Medium"
+                             Style="display: inline-block; vertical-align: top;" />
+                     }
+                     else
+                     {
+                         @* Reserve space for alignment even when no expander is shown *@
+                         <div style="width: 40px; height: 40px; display: inline-block;"></div>
+                     }
                  }
-                 <span style="@(shouldShowExpander ? "display: inline-block; vertical-align: top;" : "")">
+                 <span style="@(isFirstColumnInHierarchy ? "display: inline-block; vertical-align: top;" : "")">
                      @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
                      {
                          if (column.EditTemplate is not null)
