@@ -228,6 +228,21 @@
         </DocsPageSection>
 
         <DocsPageSection>
+            <SectionHeader Title="Self-Referencing Hierarchy">
+                <Description>
+                    The <CodeInline>&lt;MudDataGrid></CodeInline> supports self-referencing hierarchical data structures where items can contain child items of the same type.
+                    To enable this feature, set <CodeInline>SelfReferencingHierarchy="true"</CodeInline> and provide a <CodeInline>ChildrenSelector</CodeInline> function that returns the child items.
+                    <br><br>
+                    This is different from the Row Detail View above - instead of showing expanded content below each row, it displays child items as indented rows within the same table structure.
+                    Perfect for organizational charts, task hierarchies, file systems, or any tree-like data structure. You can customize the indentation level with <CodeInline>HierarchyIndentationSize</CodeInline>.
+                </Description>
+            </SectionHeader>
+            <SectionContent DarkenBackground="true" Code="@nameof(DataGridHierarchyExample)" ShowCode="false" Block="true" FullWidth="true">
+                <DataGridHierarchyExample />
+            </SectionContent>
+        </DocsPageSection>
+
+        <DocsPageSection>
             <SectionHeader Title="Resizing">
                 <Description>
                     The <CodeInline>&lt;MudDataGrid></CodeInline> allows you to resize columns interactively when

@@ -1,0 +1,114 @@
+@namespace MudBlazor.Docs.Examples
+
+<MudDataGrid T="Employee" Items="@Employees" SelfReferencingHierarchy="true" 
+             ChildrenSelector="@(item => item.DirectReports)" 
+             HierarchyIndentationSize="24"
+             Striped="true" Hover="true">
+    <Columns>
+        <HierarchyColumn />
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+        <PropertyColumn Property="x => x.Position" Title="Position" />
+        <PropertyColumn Property="x => x.Department" Title="Department" />
+        <PropertyColumn Property="x => x.Email" Title="Email" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    public class Employee
+    {
+        public string Name { get; set; } = "";
+        public string Position { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string Email { get; set; } = "";
+        public List<Employee> DirectReports { get; set; } = new();
+    }
+
+    private List<Employee> Employees = new()
+    {
+        new Employee
+        {
+            Name = "Sarah Johnson",
+            Position = "CEO",
+            Department = "Executive",
+            Email = "sarah.johnson@company.com",
+            DirectReports = new()
+            {
+                new Employee
+                {
+                    Name = "Michael Chen",
+                    Position = "VP of Engineering",
+                    Department = "Engineering",
+                    Email = "michael.chen@company.com",
+                    DirectReports = new()
+                    {
+                        new Employee
+                        {
+                            Name = "Emily Davis",
+                            Position = "Senior Developer",
+                            Department = "Engineering",
+                            Email = "emily.davis@company.com",
+                            DirectReports = new()
+                            {
+                                new Employee
+                                {
+                                    Name = "James Wilson",
+                                    Position = "Junior Developer",
+                                    Department = "Engineering",
+                                    Email = "james.wilson@company.com"
+                                },
+                                new Employee
+                                {
+                                    Name = "Lisa Zhang",
+                                    Position = "Junior Developer", 
+                                    Department = "Engineering",
+                                    Email = "lisa.zhang@company.com"
+                                }
+                            }
+                        },
+                        new Employee
+                        {
+                            Name = "David Rodriguez",
+                            Position = "DevOps Engineer",
+                            Department = "Engineering",
+                            Email = "david.rodriguez@company.com"
+                        }
+                    }
+                },
+                new Employee
+                {
+                    Name = "Anna Thompson",
+                    Position = "VP of Marketing",
+                    Department = "Marketing",
+                    Email = "anna.thompson@company.com",
+                    DirectReports = new()
+                    {
+                        new Employee
+                        {
+                            Name = "Mark Stevens",
+                            Position = "Marketing Manager",
+                            Department = "Marketing",
+                            Email = "mark.stevens@company.com",
+                            DirectReports = new()
+                            {
+                                new Employee
+                                {
+                                    Name = "Jennifer Lee",
+                                    Position = "Content Specialist",
+                                    Department = "Marketing",
+                                    Email = "jennifer.lee@company.com"
+                                }
+                            }
+                        },
+                        new Employee
+                        {
+                            Name = "Robert Kim",
+                            Position = "Digital Marketing Specialist",
+                            Department = "Marketing",
+                            Email = "robert.kim@company.com"
+                        }
+                    }
+                }
+            }
+        }
+    };
+}
