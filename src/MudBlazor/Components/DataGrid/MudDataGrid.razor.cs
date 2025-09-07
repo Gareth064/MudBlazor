@@ -2646,19 +2646,18 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
         
         try
         {
-            // Get all children to determine if expand button should be shown
+            // Get ALL children (not just filtered ones) - this matches original behavior
             var allChildren = ChildrenSelector!(item)?
                 .Where(c => c != null && !EqualityComparer<T>.Default.Equals(c, item))
                 .ToList() ?? new List<T>();
             
-            // Get filtered children for actual hierarchy building and sorting
+            // Filter children for hierarchy building - only include items that passed filtering
             var filteredChildren = allChildren.Where(c => allFilteredItems.Contains(c)).ToList();
             
             // Apply sorting to filtered children at this level
             var sortedChildren = ApplyHierarchicalSort(filteredChildren).ToList();
             
-            // HasChildren is based on all children, not just filtered ones
-            // This ensures expand buttons show up even if children are filtered out
+            // HasChildren is based on all children (original behavior)
             var hasChildren = allChildren.Count > 0;
             var isExpanded = _openHierarchies.Contains(item);
 
@@ -2674,11 +2673,12 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
             _flattenedHierarchicalItems.Add(hierarchicalItem);
             _hierarchicalItemsLookup[item] = hierarchicalItem;
 
-            // Recursively build children, limiting depth to prevent stack overflow
+            // Recursively build ALL children (not just filtered ones) - this matches original behavior
+            // This ensures that when a parent is expanded, all children are available in the hierarchy
             const int MaxDepth = 50; // Reasonable limit for UI hierarchy
             if (level < MaxDepth)
             {
-                foreach (var child in sortedChildren)
+                foreach (var child in allChildren)
                 {
                     if (child != null && !EqualityComparer<T>.Default.Equals(child, item))
                     {
@@ -2694,13 +2694,65 @@ public partial class MudDataGrid<[DynamicallyAccessedMembers(DynamicallyAccessed
     }
 
     /// <summary>
-    /// Gets visible hierarchical items based on expansion state.
+    /// Gets visible hierarchical items based on expansion state with hierarchical sorting applied.
     /// </summary>
     private IEnumerable<T> GetVisibleHierarchicalItems()
     {
-        return _flattenedHierarchicalItems
-            .Where(h => h != null && IsHierarchicalItemVisible(h))
-            .Select(h => h.Item);
+        var allFilteredItems = FilteredItemsOnly.ToHashSet();
+        
+        // Get all visible items (considering expansion state and filtering)
+        var visibleHierarchicalItems = _flattenedHierarchicalItems
+            .Where(h => h != null && 
+                       IsHierarchicalItemVisible(h) && 
+                       allFilteredItems.Contains(h.Item))
+            .ToList();
+            
+        // Apply hierarchical sorting - sort items at each level independently
+        var result = new List<T>();
+        var processedItems = new HashSet<HierarchicalItem<T>>();
+        
+        // Process root items first
+        var rootItems = visibleHierarchicalItems.Where(h => h.Parent == null).ToList();
+        var sortedRootItems = ApplyHierarchicalSort(rootItems.Select(h => h.Item)).ToList();
+        
+        foreach (var rootItem in sortedRootItems)
+        {
+            var rootHierarchicalItem = visibleHierarchicalItems.FirstOrDefault(h => EqualityComparer<T>.Default.Equals(h.Item, rootItem));
+            if (rootHierarchicalItem != null)
+            {
+                AddHierarchicalItemWithSortedChildren(rootHierarchicalItem, visibleHierarchicalItems, result, processedItems);
+            }
+        }
+        
+        return result;
+    }
+    
+    /// <summary>
+    /// Recursively adds a hierarchical item and its sorted children to the result list.
+    /// </summary>
+    private void AddHierarchicalItemWithSortedChildren(HierarchicalItem<T> item, List<HierarchicalItem<T>> allVisibleItems, List<T> result, HashSet<HierarchicalItem<T>> processedItems)
+    {
+        if (processedItems.Contains(item))
+            return;
+            
+        processedItems.Add(item);
+        result.Add(item.Item);
+        
+        // Get children and sort them at this level
+        var children = allVisibleItems.Where(h => h.Parent == item).ToList();
+        if (children.Count > 0)
+        {
+            var sortedChildren = ApplyHierarchicalSort(children.Select(h => h.Item)).ToList();
+            
+            foreach (var childItem in sortedChildren)
+            {
+                var childHierarchicalItem = children.FirstOrDefault(h => EqualityComparer<T>.Default.Equals(h.Item, childItem));
+                if (childHierarchicalItem != null)
+                {
+                    AddHierarchicalItemWithSortedChildren(childHierarchicalItem, allVisibleItems, result, processedItems);
+                }
+            }
+        }
     }
 
     /// <summary>
