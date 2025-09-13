@@ -10,6 +10,13 @@
     "labels": [
         "dependency"
     ],
+    "minimumReleaseAge": "14 days",
+    "vulnerabilityAlerts": {
+        "enabled": true,
+        "labels": [
+            "triage needed"
+        ]
+    },
     "packageRules": [
         {
             "matchPackageNames": [
@@ -24,10 +31,55 @@
             "enabled": false
         },
         {
-            "matchPackageNames": [
-                "FluentAssertions"
+            "matchManagers": [
+                "nuget"
             ],
-            "allowedVersions": "< 8.0.0"
+            "matchPaths": [
+                "src/**/MudBlazor.UnitTests*.csproj"
+            ],
+            "matchUpdateTypes": [
+                "minor",
+                "patch"
+            ],
+            "groupName": "tests dependencies",
+            "automerge": true,
+            "automergeType": "pr",
+            "requiredStatusChecks": [
+                "*"
+            ],
+            "addLabels": [
+                "tests"
+            ]
+        },
+        {
+            "matchManagers": [
+                "nuget"
+            ],
+            "matchPaths": [
+                "src/**/MudBlazor.Docs*.csproj"
+            ],
+            "matchUpdateTypes": [
+                "minor",
+                "patch"
+            ],
+            "groupName": "docs dependencies",
+            "automerge": true,
+            "automergeType": "pr",
+            "requiredStatusChecks": [
+                "*"
+            ],
+            "addLabels": [
+                "docs"
+            ]
+        },
+        {
+            "matchManagers": [
+                "nuget"
+            ],
+            "matchUpdateTypes": [
+                "major"
+            ],
+            "draftPR": true
         }
     ]
 }
