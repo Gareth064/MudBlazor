@@ -365,148 +365,106 @@
                  var cell = new Cell<T>(this, column, item);
                  var isFirstColumnInHierarchy = SelfReferencingHierarchy && IsFirstDataColumn(column);
                  var shouldShowExpander = isFirstColumnInHierarchy && ShouldShowExpandButtonForSelfReferencing(item);
+                 
+                 // Get hierarchical indentation style for first column
+                 var indentationStyle = string.Empty;
+                 if (isFirstColumnInHierarchy)
+                 {
+                     var hierarchicalItem = GetHierarchicalItem(item);
+                     if (hierarchicalItem != null)
+                     {
+                         indentationStyle = hierarchicalItem.GetIndentationStyle(HierarchyIndentationSize);
+                     }
+                 }
              }
              <td data-label="@column.Title" class="@cell.ComputedClass" style="@cell.ComputedStyle">
-                 @if (SelfReferencingHierarchy)
+                 @if (isFirstColumnInHierarchy)
                  {
-                     <MudStack Row="true" AlignItems="AlignItems.Center">
-                     @if (isFirstColumnInHierarchy)
+                     <MudStack Row="true" AlignItems="AlignItems.Center" Style="@indentationStyle">
+                     @if (shouldShowExpander)
                      {
-                         @if (shouldShowExpander)
-                         {
-                             <MudIconButton 
-                                 Class="pa-1" 
-                                 Icon="@GetGroupIcon(_openHierarchies.Contains(item), RightToLeft)" 
-                                 OnClick="@(() => ToggleHierarchyVisibilityAsync(item))"
-                                 Size="@Size.Medium"
-                                 Style="display: inline-block; vertical-align: top;" />
-                         }
-                         else
-                         {
-                             <div style="width: 30px; height: 30px; display: inline-block;"></div>
-                         }
-                     }
-                     <span style="@(isFirstColumnInHierarchy ? "display: inline-block; vertical-align: top;" : "")">"
-                     @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
-                     {
-                         if (column.EditTemplate is not null)
-                         {
-                             @column.EditTemplate(cell._cellContext)
-                         }
-                         else
-                         {
-                             if (column.PropertyType == typeof(string))
-                             {
-                                 <MudTextField T="string"
-                                               Value="@cell._valueString"
-                                               ValueChanged="@cell.StringValueChangedAsync"
-                                               Margin="@Margin.Dense" Style="margin-top:0"
-                                               Required=column.Required
-                                               Variant="@Variant.Text"/>
-                             }
-                             else if (column.isNumber)
-                             {
-                                 <MudNumericField T="double?"
-                                                  Value="@cell._valueNumber"
-                                                  ValueChanged="@cell.NumberValueChangedAsync"
-                                                  Margin="@Margin.Dense" Style="margin-top:0"
-                                                  Required=column.Required Variant="@Variant.Text" Culture="@column.Culture"/>
-                             }
-                         }
+                         <MudIconButton 
+                             Class="pa-1" 
+                             Icon="@GetGroupIcon(_openHierarchies.Contains(item), RightToLeft)" 
+                             OnClick="@(() => ToggleHierarchyVisibilityAsync(item))"
+                             Size="@Size.Medium"
+                             Style="display: inline-block; vertical-align: top;" />
                      }
                      else
                      {
-                         if (column.CellTemplate is not null)
-                         {
-                             @column.CellTemplate(cell._cellContext)
-                         }
-                         else if (column.Culture is not null && column.isNumber)
-                         {
-                             if (column.ContentFormat is not null)
-                             {
-                                 @(((IFormattable)cell._valueNumber)?.ToString(column.ContentFormat, column.Culture))
-                             }
-                             else
-                             {
-                                 @cell._valueNumber?.ToString(column.Culture)
-                             }
-                         }
-                         else
-                         {
-                             if (column.ContentFormat is not null)
-                             {
-                                 @(((IFormattable)cell.ComputedValue)?.ToString(column.ContentFormat, column.Culture))
-                             }
-                             else
-                             {
-                                 @cell.ComputedValue
-                             }
-                         }
+                         <div style="width: 40px; height: 40px; display: inline-block;"></div>
                      }
+                     <span style="display: inline-block; vertical-align: top;">
+                         @RenderCellContent(cell, column)
                      </span>
                      </MudStack>
                  }
                  else
                  {
-                     @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
-                     {
-                         if (column.EditTemplate is not null)
-                         {
-                             @column.EditTemplate(cell._cellContext)
-                         }
-                         else
-                         {
-                             if (column.PropertyType == typeof(string))
-                             {
-                                 <MudTextField T="string"
-                                               Value="@cell._valueString"
-                                               ValueChanged="@cell.StringValueChangedAsync"
-                                               Margin="@Margin.Dense" Style="margin-top:0"
-                                               Required=column.Required
-                                               Variant="@Variant.Text"/>
-                             }
-                             else if (column.isNumber)
-                             {
-                                 <MudNumericField T="double?"
-                                                  Value="@cell._valueNumber"
-                                                  ValueChanged="@cell.NumberValueChangedAsync"
-                                                  Margin="@Margin.Dense" Style="margin-top:0"
-                                                  Required=column.Required Variant="@Variant.Text" Culture="@column.Culture"/>
-                             }
-                         }
-                     }
-                     else
-                     {
-                         if (column.CellTemplate is not null)
-                         {
-                             @column.CellTemplate(cell._cellContext)
-                         }
-                         else if (column.Culture is not null && column.isNumber)
-                         {
-                             if (column.ContentFormat is not null)
-                             {
-                                 @(((IFormattable)cell._valueNumber)?.ToString(column.ContentFormat, column.Culture))
-                             }
-                             else
-                             {
-                                 @cell._valueNumber?.ToString(column.Culture)
-                             }
-                         }
-                         else
-                         {
-                             if (column.ContentFormat is not null)
-                             {
-                                 @(((IFormattable)cell.ComputedValue)?.ToString(column.ContentFormat, column.Culture))
-                             }
-                             else
-                             {
-                                 @cell.ComputedValue
-                             }
-                         }
-                     }
+                     @RenderCellContent(cell, column)
                  }
              </td>
          </text>;
+
+    private RenderFragment RenderCellContent(Cell<T> cell, Column<T> column) =>
+        @<text>
+            @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
+            {
+                if (column.EditTemplate is not null)
+                {
+                    @column.EditTemplate(cell._cellContext)
+                }
+                else
+                {
+                    if (column.PropertyType == typeof(string))
+                    {
+                        <MudTextField T="string"
+                                      Value="@cell._valueString"
+                                      ValueChanged="@cell.StringValueChangedAsync"
+                                      Margin="@Margin.Dense" Style="margin-top:0"
+                                      Required=column.Required
+                                      Variant="@Variant.Text"/>
+                    }
+                    else if (column.isNumber)
+                    {
+                        <MudNumericField T="double?"
+                                         Value="@cell._valueNumber"
+                                         ValueChanged="@cell.NumberValueChangedAsync"
+                                         Margin="@Margin.Dense" Style="margin-top:0"
+                                         Required=column.Required Variant="@Variant.Text" Culture="@column.Culture"/>
+                    }
+                }
+            }
+            else
+            {
+                if (column.CellTemplate is not null)
+                {
+                    @column.CellTemplate(cell._cellContext)
+                }
+                else if (column.Culture is not null && column.isNumber)
+                {
+                    if (column.ContentFormat is not null)
+                    {
+                        @(((IFormattable)cell._valueNumber)?.ToString(column.ContentFormat, column.Culture))
+                    }
+                    else
+                    {
+                        @cell._valueNumber?.ToString(column.Culture)
+                    }
+                }
+                else
+                {
+                    if (column.ContentFormat is not null)
+                    {
+                        @(((IFormattable)cell.ComputedValue)?.ToString(column.ContentFormat, column.Culture))
+                    }
+                    else
+                    {
+                        @cell.ComputedValue
+                    }
+                }
+            }
+        </text>;
 
     internal RenderFragment Filter(IFilterDefinition<T> filterDefinition, Column<T> column) =>
         @<text>
