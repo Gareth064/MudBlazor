@@ -367,24 +367,26 @@
                  var shouldShowExpander = isFirstColumnInHierarchy && ShouldShowExpandButtonForSelfReferencing(item);
              }
              <td data-label="@column.Title" class="@cell.ComputedClass" style="@cell.ComputedStyle">
-                 <MudStack Row="true" AlignItems="AlignItems.Center">
-                 @if (isFirstColumnInHierarchy)
+                 @if (SelfReferencingHierarchy)
                  {
-                     @if (shouldShowExpander)
+                     <MudStack Row="true" AlignItems="AlignItems.Center">
+                     @if (isFirstColumnInHierarchy)
                      {
-                         <MudIconButton 
-                             Class="pa-1" 
-                             Icon="@GetGroupIcon(_openHierarchies.Contains(item), RightToLeft)" 
-                             OnClick="@(() => ToggleHierarchyVisibilityAsync(item))"
-                             Size="@Size.Medium"
-                             Style="display: inline-block; vertical-align: top;" />
+                         @if (shouldShowExpander)
+                         {
+                             <MudIconButton 
+                                 Class="pa-1" 
+                                 Icon="@GetGroupIcon(_openHierarchies.Contains(item), RightToLeft)" 
+                                 OnClick="@(() => ToggleHierarchyVisibilityAsync(item))"
+                                 Size="@Size.Medium"
+                                 Style="display: inline-block; vertical-align: top;" />
+                         }
+                         else
+                         {
+                             <div style="width: 30px; height: 30px; display: inline-block;"></div>
+                         }
                      }
-                     else
-                     {
-                         <div style="width: 30px; height: 30px; display: inline-block;"></div>
-                     }
-                 }
-                 <span style="@(isFirstColumnInHierarchy ? "display: inline-block; vertical-align: top;" : "")">
+                     <span style="@(isFirstColumnInHierarchy ? "display: inline-block; vertical-align: top;" : "")">"
                      @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
                      {
                          if (column.EditTemplate is not null)
@@ -441,8 +443,68 @@
                              }
                          }
                      }
-                 </span>
-                 </MudStack>
+                     </span>
+                     </MudStack>
+                 }
+                 else
+                 {
+                     @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
+                     {
+                         if (column.EditTemplate is not null)
+                         {
+                             @column.EditTemplate(cell._cellContext)
+                         }
+                         else
+                         {
+                             if (column.PropertyType == typeof(string))
+                             {
+                                 <MudTextField T="string"
+                                               Value="@cell._valueString"
+                                               ValueChanged="@cell.StringValueChangedAsync"
+                                               Margin="@Margin.Dense" Style="margin-top:0"
+                                               Required=column.Required
+                                               Variant="@Variant.Text"/>
+                             }
+                             else if (column.isNumber)
+                             {
+                                 <MudNumericField T="double?"
+                                                  Value="@cell._valueNumber"
+                                                  ValueChanged="@cell.NumberValueChangedAsync"
+                                                  Margin="@Margin.Dense" Style="margin-top:0"
+                                                  Required=column.Required Variant="@Variant.Text" Culture="@column.Culture"/>
+                             }
+                         }
+                     }
+                     else
+                     {
+                         if (column.CellTemplate is not null)
+                         {
+                             @column.CellTemplate(cell._cellContext)
+                         }
+                         else if (column.Culture is not null && column.isNumber)
+                         {
+                             if (column.ContentFormat is not null)
+                             {
+                                 @(((IFormattable)cell._valueNumber)?.ToString(column.ContentFormat, column.Culture))
+                             }
+                             else
+                             {
+                                 @cell._valueNumber?.ToString(column.Culture)
+                             }
+                         }
+                         else
+                         {
+                             if (column.ContentFormat is not null)
+                             {
+                                 @(((IFormattable)cell.ComputedValue)?.ToString(column.ContentFormat, column.Culture))
+                             }
+                             else
+                             {
+                                 @cell.ComputedValue
+                             }
+                         }
+                     }
+                 }
              </td>
          </text>;
 

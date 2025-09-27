@@ -5,7 +5,6 @@
 <MudDataGrid T="TaskItem" Items="@Items" SelfReferencingHierarchy="true" ChildrenSelector="@(item => item.SubTasks)" 
              HierarchyIndentationSize="24" HierarchyVisibilityToggled="@OnHierarchyVisibilityToggled">
     <Columns>
-        <HierarchyColumn />
         <PropertyColumn Property="x => x.Title" Title="Task Title" />
         <PropertyColumn Property="x => x.Status" Title="Status" />
         <PropertyColumn Property="x => x.Priority" Title="Priority" />
