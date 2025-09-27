@@ -40,7 +40,7 @@
             <div @ref=_gridElement class="@TableClass" style="@TableStyle">
                 <MudDropContainer @ref="_dropContainer" T="Column<T>" Items="@RenderedColumns" ItemsSelector="(item, dropzone) => RenderedColumnsItemsSelector(item, dropzone)" ItemDropped="ItemUpdatedAsync" CanDropClass="@DropAllowedClass" NoDropClass="@DropNotAllowedClass" ApplyDropClassesOnDragStarted="@ApplyDropClassesOnDragStarted">
                     <ChildContent>
-                        <table class="mud-table-root">
+                        <table class="mud-table-root" role="@(TreeData ? "treegrid" : "grid")">>
                             @if (ColGroup != null)
                             {
                                 <colgroup>
@@ -363,8 +363,27 @@
         @<text>
              @{
                  var cell = new Cell<T>(this, column, item);
+                 var isTreeExpanderColumn = TreeData && RenderedColumns.IndexOf(column) == TreeExpanderColumnIndex;
+                 var itemLevel = TreeData ? GetItemLevel(item) : 0;
+                 var itemKey = TreeData ? GetItemKey(item) : string.Empty;
+                 var hasChildren = TreeData && ItemHasChildren(item);
+                 var isExpanded = TreeData && !string.IsNullOrEmpty(itemKey) && _expandedTreeItems.Contains(itemKey);
+                 var indentStyle = isTreeExpanderColumn && TreeData ? $"padding-left: {(itemLevel * TreeIndentSize)}px;" : "";
              }
-             <td data-label="@column.Title" class="@cell.ComputedClass" style="@cell.ComputedStyle">
+             <td data-label="@column.Title" class="@cell.ComputedClass" style="@cell.ComputedStyle @indentStyle">
+                 @if (isTreeExpanderColumn && hasChildren)
+                 {
+                     <MudIconButton Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                    Size="Size.Small" 
+                                    Class="mud-tree-expander-icon"
+                                    OnClick="@(async () => await ToggleTreeItemAsync(itemKey))"
+                                    Style="margin-right: 8px; display: inline-flex; vertical-align: middle;" />
+                 }
+                 else if (isTreeExpanderColumn && TreeData)
+                 {
+                     <span class="mud-tree-expander-spacer" style="display: inline-block; width: 32px; margin-right: 8px;"></span>
+                 }
+                 
                  @if (column.Editable && !ReadOnly && EditMode == DataGridEditMode.Cell)
                  {
                      if (column.EditTemplate is not null)

@@ -48,7 +48,7 @@ namespace MudBlazor
         internal (double Top, double Left) _openPosition = (0, 0);
 
         // Tree data fields
-        private HashSet<string> _expandedTreeItems = new();
+        internal HashSet<string> _expandedTreeItems = new();
         private Dictionary<string, IEnumerable<T>> _childrenCache = new();
         private Dictionary<T, string> _itemKeyCache = new();
         private IEnumerable<T> _flattenedTreeItems = null;
@@ -949,7 +949,7 @@ namespace MudBlazor
             }
         }
 
-        private string GetItemKey(T item)
+        internal string GetItemKey(T item)
         {
             if (ItemKey != null)
                 return ItemKey(item);
@@ -989,7 +989,7 @@ namespace MudBlazor
             return Array.Empty<T>();
         }
 
-        private bool ItemHasChildren(T item)
+        internal bool ItemHasChildren(T item)
         {
             if (HasChildren != null)
                 return HasChildren(item);
@@ -1016,6 +1016,17 @@ namespace MudBlazor
             }
             
             return result;
+        }
+
+        internal async Task ToggleTreeItemAsync(string itemKey)
+        {
+            if (!TreeData || string.IsNullOrEmpty(itemKey))
+                return;
+
+            if (_expandedTreeItems.Contains(itemKey))
+                await CollapseAsync(itemKey);
+            else
+                await ExpandAsync(itemKey);
         }
 
         private IEnumerable<T> FlattenTreeSync(IEnumerable<T> items, int level = 0)
@@ -1163,7 +1174,7 @@ namespace MudBlazor
             return default(T);
         }
 
-        private int GetItemLevel(T item)
+        internal int GetItemLevel(T item)
         {
             return GetItemLevelRecursive(Items, item, 0);
         }

@@ -214,3 +214,51 @@
     z-index: 0;
   }
 }
+
+// Tree Data Styles
+.mud-data-grid {
+  .mud-tree-expander-icon {
+    .mud-icon-button-label {
+      transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1) 0ms;
+    }
+    
+    &:hover {
+      background-color: var(--mud-palette-action-hover);
+    }
+  }
+
+  .mud-tree-expander-spacer {
+    min-width: 32px;
+    width: 32px;
+  }
+
+  // Tree level styles using CSS custom properties for dynamic indentation
+  .mud-table-cell {
+    &[data-tree-level] {
+      --mud-tree-indent: var(--mud-datagrid-tree-indent, 16px);
+    }
+  }
+
+  // Row level indicators (optional visual enhancement)
+  .mud-table-row {
+    &[data-tree-level="1"] { 
+      --mud-tree-bg-opacity: 0.02; 
+    }
+    &[data-tree-level="2"] { 
+      --mud-tree-bg-opacity: 0.04; 
+    }
+    &[data-tree-level="3"] { 
+      --mud-tree-bg-opacity: 0.06; 
+    }
+    &[data-tree-level="4"] { 
+      --mud-tree-bg-opacity: 0.08; 
+    }
+    &[data-tree-level="5"] { 
+      --mud-tree-bg-opacity: 0.10; 
+    }
+    
+    &[data-tree-level] {
+      background-color: rgba(var(--mud-palette-text-primary-rgb), var(--mud-tree-bg-opacity, 0));
+    }
+  }
+}

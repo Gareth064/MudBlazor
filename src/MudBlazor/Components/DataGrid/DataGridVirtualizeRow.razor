@@ -51,8 +51,18 @@
         @{
             var rowClass = new CssBuilder(DataGrid.RowClass).AddClass(DataGrid.RowClassFunc?.Invoke(itemBag.Item, itemBag.Index)).Build();
             var rowStyle = new StyleBuilder().AddStyle(DataGrid.RowStyle).AddStyle(DataGrid.RowStyleFunc?.Invoke(itemBag.Item, itemBag.Index)).Build();
+            var treeLevel = DataGrid.TreeData ? DataGrid.GetItemLevel(itemBag.Item) : -1;
+            var hasChildren = DataGrid.TreeData && DataGrid.ItemHasChildren(itemBag.Item);
+            var itemKey = DataGrid.TreeData ? DataGrid.GetItemKey(itemBag.Item) : string.Empty;
+            var isExpanded = DataGrid.TreeData && !string.IsNullOrEmpty(itemKey) && DataGrid._expandedTreeItems.Contains(itemKey);
         }
-        <tr class="mud-table-row @rowClass" Style="@rowStyle" @key="itemBag.Item"
+        <tr class="mud-table-row @rowClass" 
+            Style="@rowStyle" 
+            @key="itemBag.Item"
+            role="@(DataGrid.TreeData ? "row" : (string)null)"
+            aria-level="@(DataGrid.TreeData ? (treeLevel + 1).ToString() : (string)null)"
+            aria-expanded="@(DataGrid.TreeData && hasChildren ? isExpanded.ToString().ToLower() : (string)null)"
+            data-tree-level="@(DataGrid.TreeData ? treeLevel.ToString() : (string)null)"
             @onclick="@((args) => RowClick.InvokeAsync((args, itemBag.Item, itemBag.Index)))"
             @oncontextmenu="@((args) => ContextRowClick.InvokeAsync((args, itemBag.Item, itemBag.Index)))"
             @oncontextmenu:preventDefault="@(DataGrid.RowContextMenuClick.HasDelegate ? true : false)">
