@@ -1,0 +1,66 @@
+@namespace MudBlazor.UnitTests.TestComponents.DataGrid
+@using MudBlazor
+
+<MudDataGrid T="TreeItem" 
+             Items="@_items"
+             TreeData="true"
+             ChildrenSelector="@(item => item.Children)"
+             HasChildren="@(item => item.Children?.Any() == true)"
+             ItemKey="@(item => item.Id.ToString())"
+             TreeIndentSize="20">
+    <Columns>
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+        <PropertyColumn Property="x => x.Value" Title="Value" />
+        <PropertyColumn Property="x => x.Id" Title="ID" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private List<TreeItem> _items = new()
+    {
+        new TreeItem 
+        { 
+            Id = 1, 
+            Name = "Root 1", 
+            Value = "Root Value 1",
+            Children = new List<TreeItem>
+            {
+                new TreeItem 
+                { 
+                    Id = 2, 
+                    Name = "Child 1.1", 
+                    Value = "Child Value 1.1",
+                    Children = new List<TreeItem>
+                    {
+                        new TreeItem { Id = 4, Name = "Grandchild 1.1.1", Value = "GC Value 1.1.1", Children = new List<TreeItem>() }
+                    }
+                },
+                new TreeItem 
+                { 
+                    Id = 3, 
+                    Name = "Child 1.2", 
+                    Value = "Child Value 1.2",
+                    Children = new List<TreeItem>()
+                }
+            }
+        },
+        new TreeItem 
+        { 
+            Id = 5, 
+            Name = "Root 2", 
+            Value = "Root Value 2",
+            Children = new List<TreeItem>
+            {
+                new TreeItem { Id = 6, Name = "Child 2.1", Value = "Child Value 2.1", Children = new List<TreeItem>() }
+            }
+        }
+    };
+
+    public class TreeItem
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Value { get; set; } = "";
+        public List<TreeItem> Children { get; set; } = new();
+    }
+}

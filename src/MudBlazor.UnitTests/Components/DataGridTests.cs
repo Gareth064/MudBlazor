@@ -5516,5 +5516,63 @@ namespace MudBlazor.UnitTests.Components
             testComponent.ToggledEvents.Should().OnlyContain(x => x.Expanded == true);
             testComponent.ToggledEvents.Select(x => x.Item.Name).Should().BeEquivalentTo(["John", "Jane", "Bob"]);
         }
+
+        [Test]
+        public async Task DataGridTreeDataBasicTest()
+        {
+            var comp = Context.RenderComponent<DataGridTreeDataTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridTreeDataTest.TreeItem>>();
+
+            // Initially only root items should be visible (2 rows)
+            dataGrid.FindAll(".mud-table-body .mud-table-row").Count.Should().Be(2);
+
+            // Should show expander buttons for items with children
+            var expanderButtons = dataGrid.FindAll(".mud-tree-expander-icon");  
+            expanderButtons.Count.Should().Be(2); // Both root items have children
+
+            // Click first expander to expand Root 1
+            expanderButtons[0].Click();
+
+            // Now should have 4 rows (2 root + 2 children of Root 1)
+            await comp.InvokeAsync(() => { });
+            dataGrid.FindAll(".mud-table-body .mud-table-row").Count.Should().Be(4);
+
+            // The expanded item should show the collapse icon (ExpandMore instead of ChevronRight)
+            var updatedExpanders = dataGrid.FindAll(".mud-tree-expander-icon");
+            var firstExpanderIcon = updatedExpanders[0].QuerySelector("svg");
+            firstExpanderIcon.InnerHtml.Should().Contain("M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"); // ExpandMore icon
+
+            // Test TreeData-specific properties
+            dataGrid.Instance.TreeData.Should().BeTrue();
+            dataGrid.Instance.TreeIndentSize.Should().Be(20);
+            dataGrid.Instance.TreeExpanderColumnIndex.Should().Be(0);
+        }
+
+        [Test]
+        public async Task DataGridTreeDataExpandCollapseTest()
+        {
+            var comp = Context.RenderComponent<DataGridTreeDataTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridTreeDataTest.TreeItem>>();
+
+            // Test expand functionality
+            await comp.InvokeAsync(() => dataGrid.Instance.ExpandAsync("1"));
+            dataGrid.FindAll(".mud-table-body .mud-table-row").Count.Should().Be(4); // 2 root + 2 children
+
+            // Test expand nested child
+            await comp.InvokeAsync(() => dataGrid.Instance.ExpandAsync("2"));
+            dataGrid.FindAll(".mud-table-body .mud-table-row").Count.Should().Be(5); // 2 root + 2 children + 1 grandchild
+
+            // Test collapse functionality
+            await comp.InvokeAsync(() => dataGrid.Instance.CollapseAsync("1"));
+            dataGrid.FindAll(".mud-table-body .mud-table-row").Count.Should().Be(2); // Back to 2 root items
+
+            // Test expand all
+            await comp.InvokeAsync(() => dataGrid.Instance.ExpandAllAsync());
+            dataGrid.FindAll(".mud-table-body .mud-table-row").Count.Should().Be(6); // All items expanded
+
+            // Test collapse all
+            await comp.InvokeAsync(() => dataGrid.Instance.CollapseAllAsync());
+            dataGrid.FindAll(".mud-table-body .mud-table-row").Count.Should().Be(2); // Back to root items only
+        }
     }
 }
