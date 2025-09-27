@@ -47,6 +47,12 @@ namespace MudBlazor
         private Func<IFilterDefinition<T>> _defaultFilterDefinitionFactory = () => new FilterDefinition<T>();
         internal (double Top, double Left) _openPosition = (0, 0);
 
+        // Tree data fields
+        private HashSet<string> _expandedTreeItems = new();
+        private Dictionary<string, IEnumerable<T>> _childrenCache = new();
+        private Dictionary<T, string> _itemKeyCache = new();
+        private IEnumerable<T> _flattenedTreeItems = null;
+
         private readonly ParameterState<T> _selectedItemState;
         private readonly ParameterState<HashSet<T>> _selectedItemsState;
         private readonly ParameterState<bool> _expandSingleRowState;
@@ -176,6 +182,13 @@ namespace MudBlazor
             {
                 throw new InvalidOperationException(
                     $"Do not supply both '{nameof(ServerData)}' and '{nameof(QuickFilter)}'.");
+            }
+
+            // TreeData validation
+            if (TreeData && Groupable)
+            {
+                // Log warning instead of throwing to be less disruptive  
+                Console.WriteLine($"Warning: {GetType().Name} - TreeData and Groupable are mutually exclusive. TreeData takes precedence.");
             }
         }
 
@@ -750,9 +763,120 @@ namespace MudBlazor
                 SetupGrouping();
                 ApplyInitialExpansionForItems(_items);
                 SetupCollectionChangeTracking();
+                ClearTreeCaches();
             }
         }
 
+        #region Tree Data Parameters
+
+        /// <summary>
+        /// Enables tree mode for hierarchical self-referencing data.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>false</c>. When enabled, items with children display an expander and can be expanded to show nested rows.
+        /// </remarks>
+        [Parameter]
+        public bool TreeData { get; set; } = false;
+
+        /// <summary>
+        /// Returns the children of an item if they are already available.
+        /// </summary>
+        /// <remarks>
+        /// Used when <see cref="TreeData"/> is <c>true</c> to determine child items.
+        /// </remarks>
+        [Parameter]
+        public Func<T, IEnumerable<T>> ChildrenSelector { get; set; }
+
+        /// <summary>
+        /// Determines whether an item has children even before children are loaded.
+        /// </summary>
+        /// <remarks>
+        /// Used when <see cref="TreeData"/> is <c>true</c> to decide whether to render an expander.
+        /// </remarks>
+        [Parameter]
+        public Func<T, bool> HasChildren { get; set; }
+
+        /// <summary>
+        /// Async loader for lazy children loading.
+        /// </summary>
+        /// <remarks>
+        /// Called on first expand when <see cref="ChildrenSelector"/> returns null or empty.
+        /// </remarks>
+        [Parameter]
+        public Func<T, Task<IEnumerable<T>>> LoadChildren { get; set; }
+
+        /// <summary>
+        /// Provides a stable unique key for tree rows.
+        /// </summary>
+        /// <remarks>
+        /// Used to preserve expansion state across re-renders and server reloads.
+        /// </remarks>
+        [Parameter]
+        public Func<T, string> ItemKey { get; set; }
+
+        /// <summary>
+        /// The set of expanded item keys for two-way binding.
+        /// </summary>
+        [Parameter]
+        public HashSet<string> ExpandedItemKeys 
+        { 
+            get => _expandedTreeItems; 
+            set 
+            { 
+                if (_expandedTreeItems != value)
+                {
+                    _expandedTreeItems = value ?? new HashSet<string>();
+                    ClearTreeCaches();
+                }
+            } 
+        }
+
+        /// <summary>
+        /// Occurs when the <see cref="ExpandedItemKeys"/> have changed.
+        /// </summary>
+        [Parameter]
+        public EventCallback<HashSet<string>> ExpandedItemKeysChanged { get; set; }
+
+        /// <summary>
+        /// The horizontal indent per level in pixels.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>16</c>. Applied as left padding on the first cell of each row.
+        /// </remarks>
+        [Parameter]
+        public int TreeIndentSize { get; set; } = 16;
+
+        /// <summary>
+        /// Which visible column shows the expander icon.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>0</c> (first visible column).
+        /// </remarks>
+        [Parameter]
+        public int TreeExpanderColumnIndex { get; set; } = 0;
+
+        /// <summary>
+        /// Shows Expand All / Collapse All controls in the header/pager.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>false</c>.
+        /// </remarks>
+        [Parameter]
+        public bool ShowExpandAll { get; set; } = false;
+
+        /// <summary>
+        /// Occurs when a row is expanded in tree mode.
+        /// </summary>
+        [Parameter]
+        public EventCallback<RowExpandEventArgs<T>> OnRowExpanded { get; set; }
+
+        /// <summary>
+        /// Occurs when a row is collapsed in tree mode.
+        /// </summary>
+        [Parameter]
+        public EventCallback<RowExpandEventArgs<T>> OnRowCollapsed { get; set; }
+
+        #endregion
 
         private void OnPagerStateChanged()
         {
@@ -813,6 +937,272 @@ namespace MudBlazor
                 }
             }
         }
+
+        #region Tree Data Helper Methods
+
+        private void ClearTreeCaches()
+        {
+            if (TreeData)
+            {
+                _flattenedTreeItems = null;
+                _currentRenderFilteredItemsCache = null;
+            }
+        }
+
+        private string GetItemKey(T item)
+        {
+            if (ItemKey != null)
+                return ItemKey(item);
+
+            if (_itemKeyCache.TryGetValue(item, out var cachedKey))
+                return cachedKey;
+
+            var key = item?.GetHashCode().ToString() ?? Guid.NewGuid().ToString();
+            _itemKeyCache[item] = key;
+            return key;
+        }
+
+        private async Task<IEnumerable<T>> GetChildrenAsync(T item)
+        {
+            var itemKey = GetItemKey(item);
+            
+            if (_childrenCache.TryGetValue(itemKey, out var cachedChildren))
+                return cachedChildren;
+
+            var children = ChildrenSelector?.Invoke(item);
+            if (children?.Any() == true)
+            {
+                _childrenCache[itemKey] = children;
+                return children;
+            }
+
+            if (LoadChildren != null)
+            {
+                children = await LoadChildren(item);
+                if (children?.Any() == true)
+                {
+                    _childrenCache[itemKey] = children;
+                    return children;
+                }
+            }
+
+            return Array.Empty<T>();
+        }
+
+        private bool ItemHasChildren(T item)
+        {
+            if (HasChildren != null)
+                return HasChildren(item);
+
+            var children = ChildrenSelector?.Invoke(item);
+            return children?.Any() == true;
+        }
+
+        private async Task<IEnumerable<T>> FlattenTreeAsync(IEnumerable<T> items, int level = 0)
+        {
+            var result = new List<T>();
+            
+            foreach (var item in items)
+            {
+                result.Add(item);
+                
+                var itemKey = GetItemKey(item);
+                if (_expandedTreeItems.Contains(itemKey) && ItemHasChildren(item))
+                {
+                    var children = await GetChildrenAsync(item);
+                    var flattenedChildren = await FlattenTreeAsync(children, level + 1);
+                    result.AddRange(flattenedChildren);
+                }
+            }
+            
+            return result;
+        }
+
+        private IEnumerable<T> FlattenTreeSync(IEnumerable<T> items, int level = 0)
+        {
+            var result = new List<T>();
+            
+            foreach (var item in items)
+            {
+                result.Add(item);
+                
+                var itemKey = GetItemKey(item);
+                if (_expandedTreeItems.Contains(itemKey) && ItemHasChildren(item))
+                {
+                    var children = ChildrenSelector?.Invoke(item);
+                    if (children?.Any() == true)
+                    {
+                        var flattenedChildren = FlattenTreeSync(children, level + 1);
+                        result.AddRange(flattenedChildren);
+                    }
+                }
+            }
+            
+            return result;
+        }
+
+        /// <summary>
+        /// Expands a tree item by its key.
+        /// </summary>
+        /// <param name="itemKey">The unique key of the item to expand.</param>
+        public async Task ExpandAsync(string itemKey)
+        {
+            if (!TreeData || string.IsNullOrEmpty(itemKey))
+                return;
+
+            if (_expandedTreeItems.Add(itemKey))
+            {
+                ClearTreeCaches();
+                await ExpandedItemKeysChanged.InvokeAsync(_expandedTreeItems);
+                
+                // Find the item and fire the expanded event
+                var item = FindItemByKey(itemKey);
+                if (item != null)
+                {
+                    var level = GetItemLevel(item);
+                    await OnRowExpanded.InvokeAsync(new RowExpandEventArgs<T>
+                    {
+                        Item = item,
+                        ItemKey = itemKey,
+                        Level = level
+                    });
+                }
+                
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        /// <summary>
+        /// Collapses a tree item by its key.
+        /// </summary>
+        /// <param name="itemKey">The unique key of the item to collapse.</param>
+        public async Task CollapseAsync(string itemKey)
+        {
+            if (!TreeData || string.IsNullOrEmpty(itemKey))
+                return;
+
+            if (_expandedTreeItems.Remove(itemKey))
+            {
+                ClearTreeCaches();
+                await ExpandedItemKeysChanged.InvokeAsync(_expandedTreeItems);
+                
+                // Find the item and fire the collapsed event
+                var item = FindItemByKey(itemKey);
+                if (item != null)
+                {
+                    var level = GetItemLevel(item);
+                    await OnRowCollapsed.InvokeAsync(new RowExpandEventArgs<T>
+                    {
+                        Item = item,
+                        ItemKey = itemKey,
+                        Level = level
+                    });
+                }
+                
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+        /// <summary>
+        /// Expands all tree items.
+        /// </summary>
+        public async Task ExpandAllAsync()
+        {
+            if (!TreeData)
+                return;
+
+            var allItems = await GetAllItemsRecursivelyAsync(Items);
+            foreach (var item in allItems)
+            {
+                if (ItemHasChildren(item))
+                {
+                    var itemKey = GetItemKey(item);
+                    _expandedTreeItems.Add(itemKey);
+                }
+            }
+            
+            ClearTreeCaches();
+            await ExpandedItemKeysChanged.InvokeAsync(_expandedTreeItems);
+            await InvokeAsync(StateHasChanged);
+        }
+
+        /// <summary>
+        /// Collapses all tree items.
+        /// </summary>
+        public async Task CollapseAllAsync()
+        {
+            if (!TreeData)
+                return;
+
+            _expandedTreeItems.Clear();
+            ClearTreeCaches();
+            await ExpandedItemKeysChanged.InvokeAsync(_expandedTreeItems);
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private T FindItemByKey(string itemKey)
+        {
+            return FindItemByKeyRecursive(Items, itemKey);
+        }
+
+        private T FindItemByKeyRecursive(IEnumerable<T> items, string targetKey)
+        {
+            foreach (var item in items)
+            {
+                if (GetItemKey(item) == targetKey)
+                    return item;
+
+                var children = ChildrenSelector?.Invoke(item);
+                if (children?.Any() == true)
+                {
+                    var found = FindItemByKeyRecursive(children, targetKey);
+                    if (found != null)
+                        return found;
+                }
+            }
+            return default(T);
+        }
+
+        private int GetItemLevel(T item)
+        {
+            return GetItemLevelRecursive(Items, item, 0);
+        }
+
+        private int GetItemLevelRecursive(IEnumerable<T> items, T targetItem, int currentLevel)
+        {
+            foreach (var item in items)
+            {
+                if (ReferenceEquals(item, targetItem))
+                    return currentLevel;
+
+                var children = ChildrenSelector?.Invoke(item);
+                if (children?.Any() == true)
+                {
+                    var level = GetItemLevelRecursive(children, targetItem, currentLevel + 1);
+                    if (level >= 0)
+                        return level;
+                }
+            }
+            return -1;
+        }
+
+        private async Task<IEnumerable<T>> GetAllItemsRecursivelyAsync(IEnumerable<T> items)
+        {
+            var result = new List<T>();
+            foreach (var item in items)
+            {
+                result.Add(item);
+                var children = await GetChildrenAsync(item);
+                if (children.Any())
+                {
+                    var recursiveChildren = await GetAllItemsRecursivelyAsync(children);
+                    result.AddRange(recursiveChildren);
+                }
+            }
+            return result;
+        }
+
+        #endregion
 
 
         /// <summary>
@@ -1231,9 +1621,25 @@ namespace MudBlazor
             get
             {
                 if (_currentRenderFilteredItemsCache != null) return _currentRenderFilteredItemsCache;
+                
                 var items = HasServerData
                     ? _serverData.Items
                     : Items;
+
+                // Handle tree data flattening
+                if (TreeData && !HasServerData)
+                {
+                    if (_flattenedTreeItems != null)
+                    {
+                        items = _flattenedTreeItems;
+                    }
+                    else
+                    {
+                        // For synchronous access, we'll use the synchronous flattening
+                        items = FlattenTreeSync(items);
+                        _flattenedTreeItems = items;
+                    }
+                }
 
                 // Quick filtering
                 if (QuickFilter != null)
@@ -1255,7 +1661,11 @@ namespace MudBlazor
 
                 _currentRenderFilteredItemsCache = Sort(items).ToList(); // To list to ensure evaluation only once per render
                 unchecked { FilteringRunCount++; }
-                GroupItems(noStateChange: true);
+                
+                // Avoid grouping when in TreeData mode as they conflict
+                if (!TreeData)
+                    GroupItems(noStateChange: true);
+                    
                 return _currentRenderFilteredItemsCache;
             }
         }
