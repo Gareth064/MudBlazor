@@ -35,7 +35,8 @@ public class DataGridHierarchicalLogicTests
                     new TestItem { Name = "Child1.2", Children = new() }
                 }
             },
-            new TestItem { Name = "Parent2", Children = new() }
+            new TestItem { Name = "Parent2", Children = new() },
+            new TestItem { Name = "Parent3", Children = new() }
         };
 
         var dataGrid = new MudDataGrid<TestItem>
