@@ -228,6 +228,32 @@
         </DocsPageSection>
 
         <DocsPageSection>
+            <SectionHeader Title="Tree Data (Self-referencing)">
+                <Description>
+                    The <CodeInline>&lt;MudDataGrid></CodeInline> supports hierarchical tree data where each item can have child items of the same type. 
+                    This is perfect for displaying organizational structures, task hierarchies, category trees, or any self-referencing data.
+                    <br><br>
+                    To enable tree mode, set the <CodeInline>TreeData</CodeInline> parameter to <CodeInline>true</CodeInline> and provide:
+                    <MudList T="string" Dense="true" Class="mt-2">
+                        <MudListItem Text="ChildrenSelector - Function to retrieve child items from a parent" />
+                        <MudListItem Text="HasChildren - Function to determine if an item has children (for showing expander icons)" />
+                        <MudListItem Text="ItemKey - Function providing stable unique keys for expansion state persistence" />
+                    </MudList>
+                    <br>
+                    The tree displays expander icons for items with children, supports configurable indentation per level via <CodeInline>TreeIndentSize</CodeInline>, 
+                    and maintains expansion state across re-renders. You can control which column shows the expanders using <CodeInline>TreeExpanderColumnIndex</CodeInline>.
+                    <br><br>
+                    Tree data integrates seamlessly with existing grid features like filtering, sorting, and paging. The expansion state can be controlled 
+                    programmatically using <CodeInline>ExpandAsync</CodeInline>, <CodeInline>CollapseAsync</CodeInline>, <CodeInline>ExpandAllAsync</CodeInline>, 
+                    and <CodeInline>CollapseAllAsync</CodeInline> methods.
+                </Description>
+            </SectionHeader>
+            <SectionContent DarkenBackground="true" Code="@nameof(DataGridTreeDataExample)" ShowCode="false" Block="true" FullWidth="true">
+                <DataGridTreeDataExample />
+            </SectionContent>
+        </DocsPageSection>
+
+        <DocsPageSection>
             <SectionHeader Title="Resizing">
                 <Description>
                     The <CodeInline>&lt;MudDataGrid></CodeInline> allows you to resize columns interactively when

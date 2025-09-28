@@ -1,0 +1,156 @@
+#nullable enable
+@namespace MudBlazor.Docs.Examples
+
+<MudDataGrid T="TaskItem" 
+             Items="@_tasks"
+             TreeData="true"
+             ChildrenSelector="@(task => task.SubTasks)"
+             HasChildren="@(task => task.SubTasks != null && task.SubTasks.Any())"
+             ItemKey="@(task => task.Id.ToString())"
+             TreeIndentSize="24"
+             @bind-ExpandedItemKeys="@_expandedTasks"
+             @ref="_dataGrid">
+    <Columns>
+        <PropertyColumn Property="t => t.Title" Title="Task Title" />
+        <TemplateColumn Title="Status">
+            <CellTemplate>
+                <MudChip Size="Size.Small" 
+                         Color="@GetStatusColor(context.Item.Status)" 
+                         Variant="Variant.Filled">
+                    @context.Item.Status
+                </MudChip>
+            </CellTemplate>
+        </TemplateColumn>
+        <PropertyColumn Property="t => t.DueDate" Title="Due Date" Format="yyyy-MM-dd" />
+        <PropertyColumn Property="t => t.LastUpdated" Title="Last Updated" Format="yyyy-MM-dd HH:mm" />
+    </Columns>
+</MudDataGrid>
+
+<div class="d-flex gap-2 mt-4">
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               OnClick="@(() => _dataGrid.ExpandAllAsync())"
+               StartIcon="Icons.Material.Filled.UnfoldMore">
+        Expand All
+    </MudButton>
+    <MudButton Variant="Variant.Outlined" 
+               Color="Color.Primary" 
+               OnClick="@(() => _dataGrid.CollapseAllAsync())"
+               StartIcon="Icons.Material.Filled.UnfoldLess">
+        Collapse All
+    </MudButton>
+</div>
+
+@code {
+    private MudDataGrid<TaskItem> _dataGrid;
+    private HashSet<string> _expandedTasks = new() { "1", "4" }; // Initially expand some tasks
+    
+    private List<TaskItem> _tasks = new()
+    {
+        new TaskItem 
+        { 
+            Id = 1, 
+            Title = "Website Redesign Project", 
+            Status = TaskStatus.InProgress, 
+            DueDate = new DateTime(2024, 3, 15),
+            LastUpdated = DateTime.Now.AddDays(-2),
+            SubTasks = new List<TaskItem>
+            {
+                new TaskItem 
+                { 
+                    Id = 2, 
+                    Title = "UI/UX Design", 
+                    Status = TaskStatus.Completed, 
+                    DueDate = new DateTime(2024, 2, 28),
+                    LastUpdated = DateTime.Now.AddDays(-5),
+                    SubTasks = new List<TaskItem>
+                    {
+                        new TaskItem { Id = 3, Title = "Wireframes", Status = TaskStatus.Completed, DueDate = new DateTime(2024, 2, 20), LastUpdated = DateTime.Now.AddDays(-10) },
+                        new TaskItem { Id = 12, Title = "Mockups", Status = TaskStatus.Completed, DueDate = new DateTime(2024, 2, 25), LastUpdated = DateTime.Now.AddDays(-7) }
+                    }
+                },
+                new TaskItem { Id = 13, Title = "Frontend Development", Status = TaskStatus.InProgress, DueDate = new DateTime(2024, 3, 10), LastUpdated = DateTime.Now.AddDays(-1) },
+                new TaskItem { Id = 14, Title = "Backend Integration", Status = TaskStatus.NotStarted, DueDate = new DateTime(2024, 3, 20), LastUpdated = DateTime.Now.AddDays(-3) }
+            }
+        },
+        new TaskItem 
+        { 
+            Id = 4, 
+            Title = "Mobile App Development", 
+            Status = TaskStatus.NotStarted, 
+            DueDate = new DateTime(2024, 5, 1),
+            LastUpdated = DateTime.Now.AddDays(-1),
+            SubTasks = new List<TaskItem>
+            {
+                new TaskItem 
+                { 
+                    Id = 5, 
+                    Title = "iOS Development", 
+                    Status = TaskStatus.NotStarted, 
+                    DueDate = new DateTime(2024, 4, 15),
+                    LastUpdated = DateTime.Now.AddDays(-1),
+                    SubTasks = new List<TaskItem>
+                    {
+                        new TaskItem { Id = 6, Title = "App Store Setup", Status = TaskStatus.NotStarted, DueDate = new DateTime(2024, 4, 1), LastUpdated = DateTime.Now.AddDays(-1) },
+                        new TaskItem { Id = 7, Title = "Core Features", Status = TaskStatus.NotStarted, DueDate = new DateTime(2024, 4, 10), LastUpdated = DateTime.Now.AddDays(-1) }
+                    }
+                },
+                new TaskItem 
+                { 
+                    Id = 8, 
+                    Title = "Android Development", 
+                    Status = TaskStatus.NotStarted, 
+                    DueDate = new DateTime(2024, 4, 20),
+                    LastUpdated = DateTime.Now.AddDays(-1),
+                    SubTasks = new List<TaskItem>
+                    {
+                        new TaskItem { Id = 9, Title = "Play Store Setup", Status = TaskStatus.NotStarted, DueDate = new DateTime(2024, 4, 5), LastUpdated = DateTime.Now.AddDays(-1) },
+                        new TaskItem { Id = 10, Title = "Testing", Status = TaskStatus.NotStarted, DueDate = new DateTime(2024, 4, 18), LastUpdated = DateTime.Now.AddDays(-1) }
+                    }
+                },
+                new TaskItem { Id = 11, Title = "App Marketing", Status = TaskStatus.NotStarted, DueDate = new DateTime(2024, 4, 25), LastUpdated = DateTime.Now.AddDays(-1) }
+            }
+        },
+        new TaskItem 
+        { 
+            Id = 15, 
+            Title = "Documentation Update", 
+            Status = TaskStatus.Completed, 
+            DueDate = new DateTime(2024, 1, 31),
+            LastUpdated = DateTime.Now.AddDays(-15)
+        },
+        new TaskItem 
+        { 
+            Id = 16, 
+            Title = "Security Audit", 
+            Status = TaskStatus.InProgress, 
+            DueDate = new DateTime(2024, 2, 28),
+            LastUpdated = DateTime.Now.AddHours(-4)
+        }
+    };
+
+    private Color GetStatusColor(TaskStatus status) => status switch
+    {
+        TaskStatus.NotStarted => Color.Default,
+        TaskStatus.InProgress => Color.Warning,
+        TaskStatus.Completed => Color.Success,
+        _ => Color.Default
+    };
+
+    public class TaskItem
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public TaskStatus Status { get; set; }
+        public DateTime DueDate { get; set; }
+        public DateTime LastUpdated { get; set; }
+        public List<TaskItem> SubTasks { get; set; }
+    }
+
+    public enum TaskStatus
+    {
+        NotStarted,
+        InProgress,
+        Completed
+    }
+}
