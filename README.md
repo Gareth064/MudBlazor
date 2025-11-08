@@ -126,7 +126,7 @@ Whether it's fixing bugs, adding features, or improving documentation, everythin
 | 8.x.x | [.NET 8](https://dotnet.microsoft.com/download/dotnet/8.0), [.NET 9](https://dotnet.microsoft.com/download/dotnet/9.0) | :heavy_check_mark: Full Support |
 
 > [!TIP]
-> Upgrading? Check our [Migration Guide](https://github.com/MudBlazor/MudBlazor/blob/dev/MIGRATION.md) for help with breaking changes.  
+> Upgrading? Check our [Migration Guide](https://github.com/MudBlazor/MudBlazor/discussions/12086) for help with breaking changes.  
 
 > [!WARNING]
 > 1. Static rendering is not supported - [Learn more](https://learn.microsoft.com/aspnet/core/blazor/components/render-modes).
