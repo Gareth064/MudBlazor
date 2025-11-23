@@ -244,6 +244,40 @@
         </DocsPageSection>
 
         <DocsPageSection>
+            <SectionHeader Title="Hierarchy Rows">
+                <Description>
+                    The <CodeInline>&lt;MudDataGrid></CodeInline> supports displaying tree-structured data with <CodeInline>HierarchicalRows</CodeInline>.
+                    This feature allows items to contain children of the same type, creating an expandable/collapsible hierarchy directly within the table rows.
+                    <br><br>
+                    Set <CodeInline>HierarchicalRows</CodeInline> to <CodeInline>true</CodeInline> and provide a <CodeInline>ChildItemsSelector</CodeInline>
+                    function to specify how to retrieve child items from each parent. Use <CodeInline>HierarchyIndentSize</CodeInline> to control the indentation
+                    per level (default is 24 pixels). You can programmatically expand or collapse the hierarchy using <CodeInline>ExpandAllHierarchyRowsAsync()</CodeInline>
+                    and <CodeInline>CollapseAllHierarchyRowsAsync()</CodeInline> methods.
+                    <br><br>
+                    Note: <CodeInline>HierarchicalRows</CodeInline> cannot be used together with <CodeInline>Groupable</CodeInline>.
+                </Description>
+            </SectionHeader>
+            <SectionContent DarkenBackground="true" Code="@nameof(DataGridHierarchyRowsExample)" ShowCode="false" Block="true" FullWidth="true">
+                <DataGridHierarchyRowsExample />
+            </SectionContent>
+        </DocsPageSection>
+
+        <DocsPageSection>
+            <SectionHeader Title="Hierarchy Rows - Initial Expansion">
+                <Description>
+                    You can control which hierarchy items are initially expanded using the <CodeInline>HierarchyInitiallyExpanded</CodeInline> parameter.
+                    This parameter accepts a function that determines whether a specific item should be expanded when the grid is first rendered.
+                    <br><br>
+                    This is useful for scenarios like organization charts where you want to show a specific department expanded by default, or file browsers
+                    where certain folders should be open initially.
+                </Description>
+            </SectionHeader>
+            <SectionContent DarkenBackground="true" Code="@nameof(DataGridHierarchyRowsInitialExpandedExample)" ShowCode="false" Block="true" FullWidth="true">
+                <DataGridHierarchyRowsInitialExpandedExample />
+            </SectionContent>
+        </DocsPageSection>
+
+        <DocsPageSection>
             <SectionHeader Title="Resizing">
                 <Description>
                     The <CodeInline>&lt;MudDataGrid></CodeInline> allows you to resize columns interactively when
