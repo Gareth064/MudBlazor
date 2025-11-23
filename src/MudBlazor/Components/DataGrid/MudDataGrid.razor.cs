@@ -47,6 +47,11 @@ namespace MudBlazor
         private Func<IFilterDefinition<T>> _defaultFilterDefinitionFactory = () => new FilterDefinition<T>();
         internal (double Top, double Left) _openPosition = (0, 0);
 
+        // Hierarchy rows state management
+        private readonly HashSet<T> _expandedHierarchyItems = new();
+        private readonly Dictionary<T, IEnumerable<T>> _hierarchyChildCache = new();
+        private readonly Dictionary<T, int> _hierarchyDepthCache = new();
+
         private readonly ParameterState<T> _selectedItemState;
         private readonly ParameterState<HashSet<T>> _selectedItemsState;
         private readonly ParameterState<bool> _expandSingleRowState;
@@ -139,6 +144,14 @@ namespace MudBlazor
         protected override void OnParametersSet()
         {
             base.OnParametersSet();
+            
+            // Validate HierarchicalRows is not used with Groupable
+            if (HierarchicalRows && Groupable)
+            {
+                throw new InvalidOperationException(
+                    $"Do not use both '{nameof(HierarchicalRows)}' and '{nameof(Groupable)}' simultaneously.");
+            }
+            
             if (Items != null)
             {
                 if (ServerData != null)
@@ -153,6 +166,13 @@ namespace MudBlazor
                         $"{GetType()} can only accept one item source from its parameters. " +
                         $"Do not supply both '{nameof(Items)}' and '{nameof(VirtualizeServerData)}'.");
                 }
+                
+                // Apply initial hierarchy expansion if using hierarchical rows
+                if (HierarchicalRows)
+                {
+                    ApplyInitialHierarchyExpansion();
+                }
+                
                 return;
             }
 
@@ -1166,6 +1186,43 @@ namespace MudBlazor
         /// <remarks>Defaults to <c>false</c>.</remarks>
         [Parameter]
         public bool ExpandSingleRow { get; set; }
+
+        /// <summary>
+        /// Enables hierarchical row rendering where items can have children of the same type.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>false</c>. When <c>true</c>, rows can display nested child items creating a tree structure.
+        /// Cannot be used simultaneously with <see cref="Groupable"/>.
+        /// </remarks>
+        [Parameter]
+        public bool HierarchicalRows { get; set; }
+
+        /// <summary>
+        /// Function that returns the child items for a given parent item.
+        /// </summary>
+        /// <remarks>
+        /// Required when <see cref="HierarchicalRows"/> is <c>true</c>.
+        /// </remarks>
+        [Parameter]
+        public Func<T, IEnumerable<T>> ChildItemsSelector { get; set; }
+
+        /// <summary>
+        /// The amount of indentation (in pixels) for each level of hierarchy.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>24</c>. Applies when <see cref="HierarchicalRows"/> is <c>true</c>.
+        /// </remarks>
+        [Parameter]
+        public int HierarchyIndentSize { get; set; } = 24;
+
+        /// <summary>
+        /// Initially expanded items in the hierarchy.
+        /// </summary>
+        /// <remarks>
+        /// Defaults to <c>null</c>. Applies when <see cref="HierarchicalRows"/> is <c>true</c>.
+        /// </remarks>
+        [Parameter]
+        public Func<T, bool> HierarchyInitiallyExpanded { get; set; }
 
         /// <summary>
         /// The comparer used to determine row selection.
@@ -2490,6 +2547,134 @@ namespace MudBlazor
 
             await InvokeAsync(StateHasChanged);
         }
+
+        #region Hierarchy Rows Methods
+
+        /// <summary>
+        /// Determines if an item has children when using hierarchical rows.
+        /// </summary>
+        /// <param name="item">The item to check for children.</param>
+        /// <returns><c>true</c> if the item has children; otherwise, <c>false</c>.</returns>
+        internal bool HasHierarchyChildren(T item)
+        {
+            if (!HierarchicalRows || ChildItemsSelector == null)
+                return false;
+
+            if (!_hierarchyChildCache.TryGetValue(item, out var children))
+            {
+                children = ChildItemsSelector(item);
+                _hierarchyChildCache[item] = children;
+            }
+
+            return children?.Any() ?? false;
+        }
+
+        /// <summary>
+        /// Gets the children for an item when using hierarchical rows.
+        /// </summary>
+        /// <param name="item">The item whose children to retrieve.</param>
+        /// <returns>The children of the item, or an empty enumerable if none exist.</returns>
+        internal IEnumerable<T> GetHierarchyChildren(T item)
+        {
+            if (!_hierarchyChildCache.TryGetValue(item, out var children))
+            {
+                children = ChildItemsSelector?.Invoke(item) ?? Enumerable.Empty<T>();
+                _hierarchyChildCache[item] = children;
+            }
+
+            return children;
+        }
+
+        /// <summary>
+        /// Determines if a hierarchy item is currently expanded.
+        /// </summary>
+        /// <param name="item">The item to check.</param>
+        /// <returns><c>true</c> if the item is expanded; otherwise, <c>false</c>.</returns>
+        internal bool IsHierarchyItemExpanded(T item)
+        {
+            return _expandedHierarchyItems.Contains(item);
+        }
+
+        /// <summary>
+        /// Toggles the expansion state of a hierarchy item.
+        /// </summary>
+        /// <param name="item">The item whose expansion state to toggle.</param>
+        public async Task ToggleHierarchyItemAsync(T item)
+        {
+            if (_expandedHierarchyItems.Contains(item))
+            {
+                _expandedHierarchyItems.Remove(item);
+            }
+            else
+            {
+                _expandedHierarchyItems.Add(item);
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+
+        /// <summary>
+        /// Expands all hierarchy items recursively.
+        /// </summary>
+        public async Task ExpandAllHierarchyRowsAsync()
+        {
+            _expandedHierarchyItems.Clear();
+            ExpandAllRecursive(FilteredItems);
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private void ExpandAllRecursive(IEnumerable<T> items)
+        {
+            foreach (var item in items)
+            {
+                if (HasHierarchyChildren(item))
+                {
+                    _expandedHierarchyItems.Add(item);
+                    ExpandAllRecursive(GetHierarchyChildren(item));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Collapses all hierarchy items.
+        /// </summary>
+        public async Task CollapseAllHierarchyRowsAsync()
+        {
+            _expandedHierarchyItems.Clear();
+            await InvokeAsync(StateHasChanged);
+        }
+
+        private void ApplyInitialHierarchyExpansion()
+        {
+            if (HierarchyInitiallyExpanded == null || Items == null)
+                return;
+
+            foreach (var item in GetAllHierarchyItems(Items))
+            {
+                if (HierarchyInitiallyExpanded(item))
+                {
+                    _expandedHierarchyItems.Add(item);
+                }
+            }
+        }
+
+        private IEnumerable<T> GetAllHierarchyItems(IEnumerable<T> items)
+        {
+            foreach (var item in items)
+            {
+                yield return item;
+
+                if (HasHierarchyChildren(item))
+                {
+                    foreach (var child in GetAllHierarchyItems(GetHierarchyChildren(item)))
+                    {
+                        yield return child;
+                    }
+                }
+            }
+        }
+
+        #endregion
 
 
         #region Resize feature

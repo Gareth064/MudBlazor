@@ -5581,5 +5581,151 @@ namespace MudBlazor.UnitTests.Components
             mudIconButton = FirstFilterButton();
             mudIconButton.Icon.Should().Be(Icons.Material.Filled.BatteryAlert);
         }
+
+        [Test]
+        public async Task DataGridHierarchyRowsBasicTest()
+        {
+            var comp = Context.RenderComponent<DataGridHierarchyRowsTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>>();
+
+            // Count the number of data rows (excluding header and footer)
+            var rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(3, because: "Only 3 root items should be visible initially");
+
+            // Get the first row which has children
+            var firstRow = rows[0];
+            firstRow.TextContent.Should().Contain("Documents");
+
+            // Find and click the expand button on the first row
+            var expandButtons = dataGrid.FindAll("button.hierarchy-expander");
+            expandButtons.Count.Should().BeGreaterThan(0, because: "Should have expand buttons for items with children");
+
+            // Expand the first item
+            await comp.InvokeAsync(() => dataGrid.Instance.ToggleHierarchyItemAsync(comp.Instance.RootItems[0]));
+
+            // Now we should see the children
+            rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(6, because: "3 root items + 3 children of first item");
+
+            // Check that children are indented
+            var childRows = rows.Where(r => r.ClassList.Contains("hierarchy-level-1")).ToList();
+            childRows.Count.Should().Be(3, because: "First item has 3 children");
+
+            // Collapse the first item
+            await comp.InvokeAsync(() => dataGrid.Instance.ToggleHierarchyItemAsync(comp.Instance.RootItems[0]));
+
+            // Should be back to 3 root items
+            rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(3, because: "Children should be hidden after collapse");
+        }
+
+        [Test]
+        public async Task DataGridHierarchyRowsExpandAllTest()
+        {
+            var comp = Context.RenderComponent<DataGridHierarchyRowsTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>>();
+
+            // Initially should show only root items
+            var rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(3);
+
+            // Expand all
+            await comp.InvokeAsync(() => dataGrid.Instance.ExpandAllHierarchyRowsAsync());
+
+            // Now should show all items
+            // 3 root items (Documents, Pictures, Music)
+            // + 3 children of Documents (Resume.pdf, CoverLetter.docx, Projects folder)
+            // + 2 children of Projects (Project1.zip, Project2.zip)
+            // + 2 children of Pictures (Vacation.jpg, Family.png)
+            // = 10 total items
+            rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(10, because: "3 root + 3 children of Documents (including Projects folder) + 2 children of Projects + 2 children of Pictures");
+
+            // Check for different hierarchy levels
+            var level0 = rows.Where(r => r.ClassList.Contains("hierarchy-level-0")).ToList();
+            var level1 = rows.Where(r => r.ClassList.Contains("hierarchy-level-1")).ToList();
+            var level2 = rows.Where(r => r.ClassList.Contains("hierarchy-level-2")).ToList();
+
+            level0.Count.Should().Be(3, because: "3 root items");
+            level1.Count.Should().Be(5, because: "3 children of Documents (including Projects folder) + 2 children of Pictures");
+            level2.Count.Should().Be(2, because: "2 children of Projects");
+        }
+
+        [Test]
+        public async Task DataGridHierarchyRowsCollapseAllTest()
+        {
+            var comp = Context.RenderComponent<DataGridHierarchyRowsTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>>();
+
+            // Expand all first
+            await comp.InvokeAsync(() => dataGrid.Instance.ExpandAllHierarchyRowsAsync());
+
+            var rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(10);
+
+            // Collapse all
+            await comp.InvokeAsync(() => dataGrid.Instance.CollapseAllHierarchyRowsAsync());
+
+            // Should be back to root items only
+            rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(3, because: "All items should be collapsed");
+        }
+
+        [Test]
+        public void DataGridHierarchyRowsWithGroupableThrowsException()
+        {
+            // Using HierarchicalRows with Groupable should throw an exception
+            var exception = Assert.Throws<InvalidOperationException>(() =>
+                Context.RenderComponent<MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>>(
+                    Parameter(nameof(MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>.Items), new List<DataGridHierarchyRowsTest.FileSystemItem>()),
+                    Parameter(nameof(MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>.HierarchicalRows), true),
+                    Parameter(nameof(MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>.Groupable), true)
+                )
+            );
+            exception.Message.Should().Be("Do not use both 'HierarchicalRows' and 'Groupable' simultaneously.");
+        }
+
+        [Test]
+        public async Task DataGridHierarchyRowsNestedExpansionTest()
+        {
+            var comp = Context.RenderComponent<DataGridHierarchyRowsTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>>();
+
+            // Expand Documents
+            await comp.InvokeAsync(() => dataGrid.Instance.ToggleHierarchyItemAsync(comp.Instance.RootItems[0]));
+
+            var rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(6, because: "Documents has 3 children");
+
+            // Find Projects folder (3rd child of Documents) and expand it
+            var documentsChildren = comp.Instance.RootItems[0].Children;
+            var projectsFolder = documentsChildren[2];
+
+            await comp.InvokeAsync(() => dataGrid.Instance.ToggleHierarchyItemAsync(projectsFolder));
+
+            rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(8, because: "Projects has 2 children, so 3 + 3 + 2 = 8 visible rows");
+
+            // Check hierarchy levels
+            var level2Items = rows.Where(r => r.ClassList.Contains("hierarchy-level-2")).ToList();
+            level2Items.Count.Should().Be(2, because: "Projects has 2 children at level 2");
+        }
+
+        [Test]
+        public void DataGridHierarchyRowsItemsWithoutChildrenTest()
+        {
+            var comp = Context.RenderComponent<DataGridHierarchyRowsTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridHierarchyRowsTest.FileSystemItem>>();
+
+            // Music folder has no children - should not show expand button
+            var rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            var musicRow = rows[2]; // Third root item
+
+            musicRow.TextContent.Should().Contain("Music");
+
+            // Check that Music row has the spacer instead of expand button
+            var musicRowHtml = musicRow.InnerHtml;
+            musicRowHtml.Should().Contain("hierarchy-indent-spacer", because: "Items without children should show spacer");
+        }
     }
 }
