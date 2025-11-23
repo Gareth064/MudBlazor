@@ -1,0 +1,103 @@
+@namespace MudBlazor.Docs.Examples
+
+<MudDataGrid T="OrganizationNode" 
+             Items="@_organizationChart" 
+             HierarchicalRows="true"
+             ChildItemsSelector="@(node => node.Reports)"
+             HierarchyIndentSize="32"
+             HierarchyInitiallyExpanded="@(node => node.Department == "Engineering")"
+             Dense="true"
+             Hover="true"
+             Bordered="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">Organization Chart - Engineering Initially Expanded</MudText>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+        <PropertyColumn Property="x => x.Position" Title="Position" />
+        <PropertyColumn Property="x => x.Department" Title="Department" />
+        <PropertyColumn Property="x => x.Email" Title="Email" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private class OrganizationNode
+    {
+        public string Name { get; set; }
+        public string Position { get; set; }
+        public string Department { get; set; }
+        public string Email { get; set; }
+        public List<OrganizationNode> Reports { get; set; } = new();
+    }
+
+    private List<OrganizationNode> _organizationChart = new()
+    {
+        new OrganizationNode
+        {
+            Name = "Alice Johnson",
+            Position = "CEO",
+            Department = "Executive",
+            Email = "alice.johnson@company.com",
+            Reports = new List<OrganizationNode>
+            {
+                new OrganizationNode
+                {
+                    Name = "Bob Smith",
+                    Position = "CTO",
+                    Department = "Engineering",
+                    Email = "bob.smith@company.com",
+                    Reports = new List<OrganizationNode>
+                    {
+                        new OrganizationNode
+                        {
+                            Name = "Charlie Brown",
+                            Position = "Engineering Manager",
+                            Department = "Engineering",
+                            Email = "charlie.brown@company.com",
+                            Reports = new List<OrganizationNode>
+                            {
+                                new OrganizationNode { Name = "David Lee", Position = "Senior Developer", Department = "Engineering", Email = "david.lee@company.com" },
+                                new OrganizationNode { Name = "Emma Wilson", Position = "Developer", Department = "Engineering", Email = "emma.wilson@company.com" }
+                            }
+                        },
+                        new OrganizationNode
+                        {
+                            Name = "Frank Garcia",
+                            Position = "QA Manager",
+                            Department = "Engineering",
+                            Email = "frank.garcia@company.com",
+                            Reports = new List<OrganizationNode>
+                            {
+                                new OrganizationNode { Name = "Grace Martinez", Position = "QA Engineer", Department = "Engineering", Email = "grace.martinez@company.com" }
+                            }
+                        }
+                    }
+                },
+                new OrganizationNode
+                {
+                    Name = "Helen Davis",
+                    Position = "CFO",
+                    Department = "Finance",
+                    Email = "helen.davis@company.com",
+                    Reports = new List<OrganizationNode>
+                    {
+                        new OrganizationNode { Name = "Ian Taylor", Position = "Accountant", Department = "Finance", Email = "ian.taylor@company.com" },
+                        new OrganizationNode { Name = "Julia Anderson", Position = "Financial Analyst", Department = "Finance", Email = "julia.anderson@company.com" }
+                    }
+                },
+                new OrganizationNode
+                {
+                    Name = "Kevin Thomas",
+                    Position = "VP of Sales",
+                    Department = "Sales",
+                    Email = "kevin.thomas@company.com",
+                    Reports = new List<OrganizationNode>
+                    {
+                        new OrganizationNode { Name = "Lisa White", Position = "Sales Manager", Department = "Sales", Email = "lisa.white@company.com" },
+                        new OrganizationNode { Name = "Mike Harris", Position = "Sales Representative", Department = "Sales", Email = "mike.harris@company.com" }
+                    }
+                }
+            }
+        }
+    };
+}
