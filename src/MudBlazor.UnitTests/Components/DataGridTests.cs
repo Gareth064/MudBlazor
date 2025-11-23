@@ -5727,5 +5727,32 @@ namespace MudBlazor.UnitTests.Components
             var musicRowHtml = musicRow.InnerHtml;
             musicRowHtml.Should().Contain("hierarchy-indent-spacer", because: "Items without children should show spacer");
         }
+
+        [Test]
+        public void DataGridHierarchyRowsInitialExpansionTest()
+        {
+            var comp = Context.RenderComponent<DataGridHierarchyRowsInitialExpandedTest>();
+            var dataGrid = comp.FindComponent<MudDataGrid<DataGridHierarchyRowsInitialExpandedTest.FileSystemItem>>();
+
+            // Check that Documents is initially expanded (has InitiallyExpanded = true)
+            var rows = dataGrid.FindAll("tbody tr.mud-table-row");
+            rows.Count.Should().Be(4, because: "2 root items + 2 children of Documents (which is initially expanded)");
+
+            // Verify the expanded items
+            var documentsRow = rows[0];
+            documentsRow.TextContent.Should().Contain("Documents");
+
+            var resumeRow = rows[1];
+            resumeRow.TextContent.Should().Contain("Resume.pdf");
+            resumeRow.ClassList.Should().Contain("hierarchy-level-1", because: "Resume is a child of Documents");
+
+            var coverLetterRow = rows[2];
+            coverLetterRow.TextContent.Should().Contain("CoverLetter.docx");
+            coverLetterRow.ClassList.Should().Contain("hierarchy-level-1", because: "CoverLetter is a child of Documents");
+
+            var picturesRow = rows[3];
+            picturesRow.TextContent.Should().Contain("Pictures");
+            picturesRow.ClassList.Should().Contain("hierarchy-level-0", because: "Pictures is a root item");
+        }
     }
 }
