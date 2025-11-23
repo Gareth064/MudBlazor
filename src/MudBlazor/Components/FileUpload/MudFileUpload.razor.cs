@@ -144,6 +144,7 @@ namespace MudBlazor
         /// <remarks>
         /// These styles apply when <see cref="Hidden"/> is <c>false</c>.
         /// </remarks>
+        [Obsolete("Prefer the InputClass property with CSS https://github.com/MudBlazor/MudBlazor/issues/12047")]
         [Parameter]
         [Category(CategoryTypes.FileUpload.Appearance)]
         public string? InputStyle { get; set; }
