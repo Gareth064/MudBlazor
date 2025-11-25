@@ -168,11 +168,11 @@
                         Size="Size.Small"
                         OnClick="@(() => DataGrid.ToggleHierarchyItemAsync(item))"
                         Class="hierarchy-expander"
-                        Style="flex-shrink: 0;" />
+                        Style="flex-shrink: 0; width: 30px; height: 30px;" />
                 }
                 else
                 {
-                    <span class="hierarchy-indent-spacer" style="width: 40px; flex-shrink: 0;"></span>
+                    <span class="hierarchy-indent-spacer" style="width: 30px; height: 30px; flex-shrink: 0;"></span>
                 }
                 <span style="flex: 1;">
                     @if (column.CellTemplate != null)
