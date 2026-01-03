@@ -1,0 +1,45 @@
+@namespace MudBlazor.UnitTests.TestComponents.DataGrid
+
+<MudDataGrid @ref="_dataGrid"
+             T="SelfReferencingItem"
+             Items="@GetRootItems()"
+             HierarchicalRows="true"
+             ChildItemsSelector="@(item => GetChildren(item))"
+             HierarchyIndentSize="24">
+    <Columns>
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+        <PropertyColumn Property="x => x.Level" Title="Level" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<SelfReferencingItem> _dataGrid = null!;
+
+    public class SelfReferencingItem
+    {
+        public int Id { get; set; }
+        public int? ParentId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int Level { get; set; }
+    }
+
+    private List<SelfReferencingItem> _items = new()
+    {
+        new SelfReferencingItem { Id = 1, ParentId = null, Name = "Root 1", Level = 0 },
+        new SelfReferencingItem { Id = 2, ParentId = 1, Name = "Child 1.1", Level = 1 },
+        new SelfReferencingItem { Id = 3, ParentId = 1, Name = "Child 1.2", Level = 1 },
+        new SelfReferencingItem { Id = 4, ParentId = 2, Name = "Child 1.1.1", Level = 2 },
+        new SelfReferencingItem { Id = 5, ParentId = null, Name = "Root 2", Level = 0 },
+        new SelfReferencingItem { Id = 6, ParentId = 5, Name = "Child 2.1", Level = 1 }
+    };
+
+    private IEnumerable<SelfReferencingItem> GetChildren(SelfReferencingItem item)
+    {
+        return _items.Where(x => x.ParentId == item.Id);
+    }
+
+    private IEnumerable<SelfReferencingItem> GetRootItems()
+    {
+        return _items.Where(x => x.ParentId == null);
+    }
+}
