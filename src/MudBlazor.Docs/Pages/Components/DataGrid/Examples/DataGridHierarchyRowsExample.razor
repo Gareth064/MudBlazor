@@ -1,0 +1,118 @@
+@namespace MudBlazor.Docs.Examples
+
+<MudDataGrid @ref="_dataGrid"
+             T="FileSystemItem" 
+             Items="@_rootItems" 
+             HierarchicalRows="true"
+             ChildItemsSelector="@(item => item.Children)"
+             HierarchyIndentSize="24"
+             Dense="true"
+             Hover="true">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">File System Hierarchy</MudText>
+        <MudSpacer />
+        <MudButton Color="Color.Primary" OnClick="ExpandAll" Size="Size.Small">Expand All</MudButton>
+        <MudButton Color="Color.Secondary" OnClick="CollapseAll" Size="Size.Small">Collapse All</MudButton>
+    </ToolBarContent>
+    <Columns>
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+        <PropertyColumn Property="x => x.Size" Title="Size" />
+        <PropertyColumn Property="x => x.Type" Title="Type" />
+        <PropertyColumn Property="x => x.Modified" Title="Modified" Format="yyyy-MM-dd HH:mm" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    private MudDataGrid<FileSystemItem> _dataGrid;
+    
+    private class FileSystemItem
+    {
+        public string Name { get; set; }
+        public string Size { get; set; }
+        public string Type { get; set; }
+        public DateTime Modified { get; set; }
+        public List<FileSystemItem> Children { get; set; } = new();
+    }
+
+    private List<FileSystemItem> _rootItems = new()
+    {
+        new FileSystemItem
+        {
+            Name = "Documents",
+            Size = "1.2 GB",
+            Type = "Folder",
+            Modified = DateTime.Now.AddDays(-7),
+            Children = new List<FileSystemItem>
+            {
+                new FileSystemItem { Name = "Resume.pdf", Size = "250 KB", Type = "PDF", Modified = DateTime.Now.AddDays(-30) },
+                new FileSystemItem { Name = "CoverLetter.docx", Size = "100 KB", Type = "Word", Modified = DateTime.Now.AddDays(-15) },
+                new FileSystemItem
+                {
+                    Name = "Projects",
+                    Size = "800 MB",
+                    Type = "Folder",
+                    Modified = DateTime.Now.AddDays(-3),
+                    Children = new List<FileSystemItem>
+                    {
+                        new FileSystemItem { Name = "Project1.zip", Size = "400 MB", Type = "Archive", Modified = DateTime.Now.AddDays(-5) },
+                        new FileSystemItem { Name = "Project2.zip", Size = "400 MB", Type = "Archive", Modified = DateTime.Now.AddDays(-3) },
+                        new FileSystemItem
+                        {
+                            Name = "Archive",
+                            Size = "100 MB",
+                            Type = "Folder",
+                            Modified = DateTime.Now.AddDays(-20),
+                            Children = new List<FileSystemItem>
+                            {
+                                new FileSystemItem { Name = "Old1.zip", Size = "50 MB", Type = "Archive", Modified = DateTime.Now.AddDays(-90) },
+                                new FileSystemItem { Name = "Old2.zip", Size = "50 MB", Type = "Archive", Modified = DateTime.Now.AddDays(-60) }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        new FileSystemItem
+        {
+            Name = "Pictures",
+            Size = "3.5 GB",
+            Type = "Folder",
+            Modified = DateTime.Now.AddDays(-2),
+            Children = new List<FileSystemItem>
+            {
+                new FileSystemItem { Name = "Vacation.jpg", Size = "2.5 MB", Type = "Image", Modified = DateTime.Now.AddDays(-10) },
+                new FileSystemItem { Name = "Family.png", Size = "3.0 MB", Type = "Image", Modified = DateTime.Now.AddDays(-5) },
+                new FileSystemItem { Name = "Portrait.jpg", Size = "1.8 MB", Type = "Image", Modified = DateTime.Now.AddDays(-2) }
+            }
+        },
+        new FileSystemItem
+        {
+            Name = "Music",
+            Size = "2.1 GB",
+            Type = "Folder",
+            Modified = DateTime.Now.AddDays(-14),
+            Children = new List<FileSystemItem>
+            {
+                new FileSystemItem { Name = "Song1.mp3", Size = "5 MB", Type = "Audio", Modified = DateTime.Now.AddDays(-20) },
+                new FileSystemItem { Name = "Song2.mp3", Size = "4.5 MB", Type = "Audio", Modified = DateTime.Now.AddDays(-18) }
+            }
+        },
+        new FileSystemItem
+        {
+            Name = "Videos",
+            Size = "8.3 GB",
+            Type = "Folder",
+            Modified = DateTime.Now.AddDays(-1)
+        }
+    };
+
+    private async Task ExpandAll()
+    {
+        await _dataGrid.ExpandAllHierarchyRowsAsync();
+    }
+
+    private async Task CollapseAll()
+    {
+        await _dataGrid.CollapseAllHierarchyRowsAsync();
+    }
+}

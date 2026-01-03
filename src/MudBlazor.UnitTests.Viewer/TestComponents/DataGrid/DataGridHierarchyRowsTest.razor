@@ -1,0 +1,66 @@
+@namespace MudBlazor.UnitTests.TestComponents.DataGrid
+
+<MudDataGrid T="FileSystemItem" 
+             Items="@RootItems" 
+             HierarchicalRows="true"
+             ChildItemsSelector="@(item => item.Children)"
+             HierarchyIndentSize="24">
+    <Columns>
+        <PropertyColumn Property="x => x.Name" Title="Name" />
+        <PropertyColumn Property="x => x.Size" Title="Size" />
+        <PropertyColumn Property="x => x.Type" Title="Type" />
+    </Columns>
+</MudDataGrid>
+
+@code {
+    public class FileSystemItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Size { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public List<FileSystemItem> Children { get; set; } = new();
+    }
+
+    public List<FileSystemItem> RootItems = new()
+    {
+        new FileSystemItem
+        {
+            Name = "Documents",
+            Size = "1.2 GB",
+            Type = "Folder",
+            Children = new List<FileSystemItem>
+            {
+                new FileSystemItem { Name = "Resume.pdf", Size = "250 KB", Type = "PDF" },
+                new FileSystemItem { Name = "CoverLetter.docx", Size = "100 KB", Type = "Word Document" },
+                new FileSystemItem
+                {
+                    Name = "Projects",
+                    Size = "800 MB",
+                    Type = "Folder",
+                    Children = new List<FileSystemItem>
+                    {
+                        new FileSystemItem { Name = "Project1.zip", Size = "400 MB", Type = "Archive" },
+                        new FileSystemItem { Name = "Project2.zip", Size = "400 MB", Type = "Archive" }
+                    }
+                }
+            }
+        },
+        new FileSystemItem
+        {
+            Name = "Pictures",
+            Size = "3.5 GB",
+            Type = "Folder",
+            Children = new List<FileSystemItem>
+            {
+                new FileSystemItem { Name = "Vacation.jpg", Size = "2.5 MB", Type = "Image" },
+                new FileSystemItem { Name = "Family.png", Size = "3.0 MB", Type = "Image" }
+            }
+        },
+        new FileSystemItem
+        {
+            Name = "Music",
+            Size = "2.1 GB",
+            Type = "Folder"
+        }
+    };
+}

@@ -213,4 +213,34 @@
   .mud-drop-item-preview-start {
     z-index: 0;
   }
+
+  // Hierarchy rows styles
+  .hierarchy-expander {
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .hierarchy-indent-spacer {
+    display: inline-block;
+  }
+
+  .hierarchy-level-1 {
+    background-color: rgba(var(--mud-palette-action-default-rgb), 0.02);
+  }
+
+  .hierarchy-level-2 {
+    background-color: rgba(var(--mud-palette-action-default-rgb), 0.04);
+  }
+
+  .hierarchy-level-3 {
+    background-color: rgba(var(--mud-palette-action-default-rgb), 0.06);
+  }
+
+  .hierarchy-level-4 {
+    background-color: rgba(var(--mud-palette-action-default-rgb), 0.08);
+  }
+
+  .hierarchy-level-5 {
+    background-color: rgba(var(--mud-palette-action-default-rgb), 0.10);
+  }
 }
